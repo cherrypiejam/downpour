@@ -3,10 +3,10 @@ package piecedownloader
 import (
 	"testing"
 
-	"github.com/cenkalti/rain/internal/bufferpool"
-	"github.com/cenkalti/rain/internal/filesection"
-	"github.com/cenkalti/rain/internal/peerprotocol"
-	"github.com/cenkalti/rain/internal/piece"
+	"downpour/internal/bufferpool"
+	"downpour/internal/filesection"
+	"downpour/internal/peerprotocol"
+	"downpour/internal/piece"
 	"github.com/stretchr/testify/assert"
 )
 

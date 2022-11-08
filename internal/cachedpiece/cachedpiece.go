@@ -3,8 +3,8 @@ package cachedpiece
 import (
 	"encoding/binary"
 
-	"github.com/cenkalti/rain/internal/piece"
-	"github.com/cenkalti/rain/internal/piececache"
+	"downpour/internal/piece"
+	"downpour/internal/piececache"
 )
 
 // CachedPiece is a wrapper around a piece.Piece object that is capable of reading the data from a picecache.Cache.

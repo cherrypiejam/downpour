@@ -3,10 +3,10 @@ package torrent
 import (
 	"fmt"
 
-	"github.com/cenkalti/rain/internal/allocator"
-	"github.com/cenkalti/rain/internal/bitfield"
-	"github.com/cenkalti/rain/internal/piece"
-	"github.com/cenkalti/rain/internal/piecepicker"
+	"downpour/internal/allocator"
+	"downpour/internal/bitfield"
+	"downpour/internal/piece"
+	"downpour/internal/piecepicker"
 )
 
 func (t *torrent) handleAllocationDone(al *allocator.Allocator) {

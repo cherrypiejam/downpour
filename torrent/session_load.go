@@ -4,12 +4,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/cenkalti/rain/internal/bitfield"
-	"github.com/cenkalti/rain/internal/metainfo"
-	"github.com/cenkalti/rain/internal/resumer"
-	"github.com/cenkalti/rain/internal/resumer/boltdbresumer"
-	"github.com/cenkalti/rain/internal/storage/filestorage"
-	"github.com/cenkalti/rain/internal/webseedsource"
+	"downpour/internal/bitfield"
+	"downpour/internal/metainfo"
+	"downpour/internal/resumer"
+	"downpour/internal/resumer/boltdbresumer"
+	"downpour/internal/storage/filestorage"
+	"downpour/internal/webseedsource"
 	"go.etcd.io/bbolt"
 )
 

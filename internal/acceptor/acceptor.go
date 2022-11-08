@@ -3,7 +3,7 @@ package acceptor
 import (
 	"net"
 
-	"github.com/cenkalti/rain/internal/logger"
+	"downpour/internal/logger"
 )
 
 // Acceptor accepts sockets from a listener and sends to a channel.

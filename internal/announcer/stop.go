@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/cenkalti/rain/internal/logger"
-	"github.com/cenkalti/rain/internal/tracker"
+	"downpour/internal/logger"
+	"downpour/internal/tracker"
 )
 
 // StopAnnouncer is used to send a stop event to the Tracker.

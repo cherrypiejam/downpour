@@ -5,10 +5,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/cenkalti/rain/internal/blocklist"
-	"github.com/cenkalti/rain/internal/externalip"
-	"github.com/cenkalti/rain/internal/peerpriority"
-	"github.com/cenkalti/rain/internal/peersource"
+	"downpour/internal/blocklist"
+	"downpour/internal/externalip"
+	"downpour/internal/peerpriority"
+	"downpour/internal/peersource"
 	"github.com/google/btree"
 )
 

@@ -10,12 +10,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cenkalti/rain/internal/magnet"
-	"github.com/cenkalti/rain/internal/metainfo"
-	"github.com/cenkalti/rain/internal/resumer"
-	"github.com/cenkalti/rain/internal/resumer/boltdbresumer"
-	"github.com/cenkalti/rain/internal/storage/filestorage"
-	"github.com/cenkalti/rain/internal/webseedsource"
+	"downpour/internal/magnet"
+	"downpour/internal/metainfo"
+	"downpour/internal/resumer"
+	"downpour/internal/resumer/boltdbresumer"
+	"downpour/internal/storage/filestorage"
+	"downpour/internal/webseedsource"
 	"github.com/gofrs/uuid"
 	"github.com/nictuku/dht"
 )

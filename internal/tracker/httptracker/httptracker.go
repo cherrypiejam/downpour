@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cenkalti/rain/internal/logger"
-	"github.com/cenkalti/rain/internal/tracker"
+	"downpour/internal/logger"
+	"downpour/internal/tracker"
 	"github.com/zeebo/bencode"
 )
 

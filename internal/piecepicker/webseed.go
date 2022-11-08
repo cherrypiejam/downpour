@@ -3,8 +3,8 @@ package piecepicker
 import (
 	"sort"
 
-	"github.com/cenkalti/rain/internal/peer"
-	"github.com/cenkalti/rain/internal/webseedsource"
+	"downpour/internal/peer"
+	"downpour/internal/webseedsource"
 )
 
 // WebseedDownloadSpec contains information for downloading torrent data from webseed sources.

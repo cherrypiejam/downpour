@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cenkalti/rain/internal/logger"
-	"github.com/cenkalti/rain/internal/webseedsource"
+	"downpour/internal/logger"
+	"downpour/internal/webseedsource"
 	fhttp "github.com/chihaya/chihaya/frontend/http"
 	"github.com/chihaya/chihaya/middleware"
 	"github.com/chihaya/chihaya/storage"

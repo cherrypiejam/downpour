@@ -1,4 +1,4 @@
-module github.com/cenkalti/rain
+module downpour
 
 go 1.18
 

@@ -3,7 +3,7 @@ package torrent
 import (
 	"time"
 
-	"github.com/cenkalti/rain/internal/peersource"
+	"downpour/internal/peersource"
 )
 
 // Torrent event loop

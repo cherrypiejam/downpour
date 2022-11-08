@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cenkalti/rain/internal/rpctypes"
+	"downpour/internal/rpctypes"
 	"github.com/powerman/rpc-codec/jsonrpc2"
 )
 

@@ -4,7 +4,7 @@ import (
 	"io/fs"
 	"time"
 
-	"github.com/cenkalti/rain/internal/metainfo"
+	"downpour/internal/metainfo"
 )
 
 var (

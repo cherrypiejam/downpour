@@ -3,7 +3,7 @@ package torrent
 import (
 	"time"
 
-	"github.com/cenkalti/rain/internal/handshaker/outgoinghandshaker"
+	"downpour/internal/handshaker/outgoinghandshaker"
 )
 
 func (t *torrent) writeBitfield() error {

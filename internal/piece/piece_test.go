@@ -3,7 +3,7 @@ package piece
 import (
 	"testing"
 
-	"github.com/cenkalti/rain/internal/filesection"
+	"downpour/internal/filesection"
 	"github.com/stretchr/testify/assert"
 )
 

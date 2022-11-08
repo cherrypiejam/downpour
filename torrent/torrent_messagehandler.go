@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/cenkalti/rain/internal/bitfield"
-	"github.com/cenkalti/rain/internal/cachedpiece"
-	"github.com/cenkalti/rain/internal/peer"
-	"github.com/cenkalti/rain/internal/peerconn/peerwriter"
-	"github.com/cenkalti/rain/internal/peerprotocol"
-	"github.com/cenkalti/rain/internal/peersource"
-	"github.com/cenkalti/rain/internal/piecedownloader"
-	"github.com/cenkalti/rain/internal/piecewriter"
-	"github.com/cenkalti/rain/internal/tracker"
+	"downpour/internal/bitfield"
+	"downpour/internal/cachedpiece"
+	"downpour/internal/peer"
+	"downpour/internal/peerconn/peerwriter"
+	"downpour/internal/peerprotocol"
+	"downpour/internal/peersource"
+	"downpour/internal/piecedownloader"
+	"downpour/internal/piecewriter"
+	"downpour/internal/tracker"
 )
 
 func (t *torrent) handlePieceMessage(pm peer.PieceMessage) {

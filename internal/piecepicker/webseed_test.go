@@ -3,7 +3,7 @@ package piecepicker
 import (
 	"testing"
 
-	"github.com/cenkalti/rain/internal/piece"
+	"downpour/internal/piece"
 	"github.com/stretchr/testify/assert"
 )
 
