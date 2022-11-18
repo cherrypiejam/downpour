@@ -105,7 +105,7 @@ func main() {
 		},
 		{
 			Name:  "dd",
-			Usage: "download single torrent",
+			Usage: "dd single torrent",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "config,c",
