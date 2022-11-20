@@ -884,6 +884,7 @@ func handleDd(c *cli.Context) error {
 			}
 		case <-time.After(time.Second):
 			stats := t.Stats()
+			peers := t.Peers()
 			progress := 0
 			if stats.Bytes.Total > 0 {
 				progress = int((stats.Bytes.Completed * 100) / stats.Bytes.Total)
@@ -892,8 +893,13 @@ func handleDd(c *cli.Context) error {
 			if stats.ETA != nil {
 				eta = stats.ETA.String()
 			}
+			log.Infof("------------\n")
 			log.Infof("Status: %s, Progress: %d%%, Peers: %d, Speed: %dK/s, ETA: %s, Upload Speed %dK/s\n",
 				stats.Status.String(), progress, stats.Peers.Total, stats.Speed.Download/1024, eta, stats.Speed.Upload/1024)
+			for _, p := range peers {
+				log.Infof("\tPeer: %s, Download: %dK/s, Upload %dK/s\n",
+					p.Addr.String(), p.DownloadSpeed/1024, p.UploadSpeed/1024)
+			}
 		case err = <-t.NotifyStop():
 			return err
 		}

@@ -14,13 +14,14 @@ func (t *torrent) handleNewConnection(conn net.Conn) {
 	}
 	ip := conn.RemoteAddr().(*net.TCPAddr).IP
 	ipstr := ip.String()
+	addr := conn.RemoteAddr().String()
 	if t.session.config.BlocklistEnabledForIncomingConnections && t.session.blocklist != nil && t.session.blocklist.Blocked(ip) {
 		t.log.Debugln("peer is blocked:", conn.RemoteAddr().String())
 		conn.Close()
 		return
 	}
-	if _, ok := t.connectedPeerIPs[ipstr]; ok {
-		t.log.Debugln("received duplicate connection from same IP: ", ipstr)
+	if _, ok := t.connectedPeerIPs[addr]; ok {
+		t.log.Debugln("received duplicate connection from same address: ", addr)
 		conn.Close()
 		return
 	}
@@ -31,7 +32,7 @@ func (t *torrent) handleNewConnection(conn net.Conn) {
 	}
 	h := incominghandshaker.New(conn)
 	t.incomingHandshakers[h] = struct{}{}
-	t.connectedPeerIPs[ipstr] = struct{}{}
+	t.connectedPeerIPs[addr] = struct{}{}
 	go h.Run(
 		t.peerID,
 		t.getSKey,

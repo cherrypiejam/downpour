@@ -223,6 +223,7 @@ type torrent struct {
 	seedDurationTicker    *time.Ticker
 
 	// Holds connected peer IPs so we don't dial/accept multiple connections to/from same IP.
+    // Note: We use IP + Port instead
 	connectedPeerIPs map[string]struct{}
 
 	// Peers that are sending corrupt data are banned.

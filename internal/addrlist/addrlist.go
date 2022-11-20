@@ -79,7 +79,8 @@ func (d *AddrList) Push(addrs []*net.TCPAddr, source peersource.Source) {
 		// Discard own client
 		if ad.IP.IsLoopback() && ad.Port == d.listenPort {
 			continue
-		} else if d.clientIP.Equal(ad.IP) {
+		} else if d.clientIP.Equal(ad.IP) && ad.Port == d.listenPort {
+			// Allow clients with the same IP address
 			continue
 		}
 		if externalip.IsExternal(ad.IP) {

@@ -100,13 +100,13 @@ func (t *torrent) dialAddresses() {
 			t.setNeedMorePeers(true)
 			return
 		}
-		ip := addr.IP.String()
-		if _, ok := t.connectedPeerIPs[ip]; ok {
+		addrstr := addr.String()
+		if _, ok := t.connectedPeerIPs[addrstr]; ok {
 			continue
 		}
 		h := outgoinghandshaker.New(addr, src)
 		t.outgoingHandshakers[h] = struct{}{}
-		t.connectedPeerIPs[ip] = struct{}{}
+		t.connectedPeerIPs[addrstr] = struct{}{}
 		go h.Run(
 			t.session.config.PeerConnectTimeout,
 			t.session.config.PeerHandshakeTimeout,

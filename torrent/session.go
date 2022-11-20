@@ -24,6 +24,7 @@ import (
 	"downpour/internal/semaphore"
 	"downpour/internal/tracker"
 	"downpour/internal/trackermanager"
+
 	"github.com/juju/ratelimit"
 	"github.com/mitchellh/go-homedir"
 	"github.com/nictuku/dht"
