@@ -211,7 +211,8 @@ func NewSession(cfg Config) (*Session, error) {
 	if err != nil {
 		panic(err)
 	}
-	ext.Set(61) // Fast Extension (BEP 6)
+	// Change: We disable fast extension here
+	// ext.Set(61) // Fast Extension (BEP 6)
 	ext.Set(43) // Extension Protocol (BEP 10)
 	if cfg.DHTEnabled {
 		ext.Set(63) // DHT Protocol (BEP 5)
