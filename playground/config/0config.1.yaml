@@ -1,0 +1,6 @@
+---
+  database: "~/software/p2p/downpour/data/session.db"
+  datadir: "~/software/p2p/downpour/data"
+  unchokedpeers: 5
+  rpcport: 7247
+  dhtport: 7247
