@@ -9,4 +9,4 @@ TODOS
 - [x] Disable fasten enable extension (Experiment)
 - [ ] Make active set dynamically adjustable (BitTyrant)
 - [ ] Infer the download speed of each peer (BitTyrant)
-- [ ] Randomly select which piece to download
+- [x] Randomly select which piece to download
