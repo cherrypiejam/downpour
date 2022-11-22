@@ -3,6 +3,7 @@ package unchoker
 import (
 	"math/rand"
 	"sort"
+	"fmt"
 )
 
 // Unchoker implements an algorithm to select peers to unchoke based on their download speed.
@@ -15,6 +16,13 @@ type Unchoker struct {
 
 	peersUnchoked           map[Peer]struct{}
 	peersUnchokedOptimistic map[Peer]struct{}
+
+	// Upload Capacity
+	Capacity int
+
+	UnchokeRoundsThres int
+	Delta float32
+	Gamma float32
 }
 
 // Peer of a torrent.
@@ -34,6 +42,12 @@ type Peer interface {
 	// OptimisticUnchoked returns the value previously set by SetOptimistic
 	Optimistic() bool
 
+	UnchokedRounds() int
+	SetUnchokedRounds(r int) 
+	EstimatedDownloadSpeed() int
+	ReciprocalUploadSpeed() int
+	SetReciprocalUploadSpeed(speed int)
+
 	DownloadSpeed() int
 	UploadSpeed() int
 }
@@ -45,6 +59,10 @@ func New(numUnchoked, numOptimisticUnchoked int) *Unchoker {
 		numOptimisticUnchoked:   numOptimisticUnchoked,
 		peersUnchoked:           make(map[Peer]struct{}, numUnchoked),
 		peersUnchokedOptimistic: make(map[Peer]struct{}, numUnchoked),
+		Capacity: 64,	// Constant values for now
+		UnchokeRoundsThres: 3,
+		Delta: 0.2,
+		Gamma: 0.3,
 	}
 }
 
@@ -72,6 +90,62 @@ func (u *Unchoker) sortPeers(peers []Peer, completed bool) {
 	} else {
 		sort.Slice(peers, byDownloadSpeed)
 	}
+}
+
+// BitTyrant sort peers by d_p/u_p
+func (u *Unchoker) sortPeersByRatio(peers []Peer) {
+	byRatio := func(i, j int) bool { 
+		if peers[i].ReciprocalUploadSpeed() == 0.0 {
+			return true
+		}
+		return peers[i].EstimatedDownloadSpeed() / peers[i].ReciprocalUploadSpeed() > 
+			   peers[j].EstimatedDownloadSpeed() / peers[j].ReciprocalUploadSpeed()
+	}
+
+	sort.Slice(peers, byRatio)
+}
+
+// BitTyrant's periodic 'unchoke'
+func (u *Unchoker) TickTyrantUnchoke(allPeers []Peer, torrentCompleted bool) {
+
+	fmt.Println("------------- In Tyrant Unchoke() -------------")
+	peers := u.candidatesUnchoke(allPeers)
+
+	var i int
+
+	// update u_p based on rounds of being choked/unchoked
+	// Only update peers that are unchoked
+	for pe := range u.peersUnchoked {
+		if pe.DownloadSpeed() > 0.0{
+			pe.SetUnchokedRounds((pe.UnchokedRounds() + 1) % u.UnchokeRoundsThres)
+			if pe.UnchokedRounds() == 0{
+				pe.SetReciprocalUploadSpeed(int(float32(pe.ReciprocalUploadSpeed()) * (1 - u.Gamma)))
+			}
+		} else {
+			pe.SetUnchokedRounds(0)
+			pe.SetReciprocalUploadSpeed(int(float32(pe.ReciprocalUploadSpeed()) * (1 + u.Delta)))
+		}
+	}
+	u.sortPeersByRatio(peers)
+	
+	// bugdet of upload speed
+	var budget int = 0
+
+	for i = 0; i < len(peers) && budget < u.Capacity; i++ {
+		if budget + peers[i].ReciprocalUploadSpeed() > u.Capacity{
+			break
+		}
+
+		budget = budget + peers[i].ReciprocalUploadSpeed()
+		u.unchokePeer(peers[i])
+	}
+
+	peers = peers[i:]
+
+	for _, pe := range peers {
+		u.chokePeer(pe)
+	}
+	// u.round = (u.round + 1) % 3
 }
 
 // TickUnchoke must be called at every 10 seconds.
