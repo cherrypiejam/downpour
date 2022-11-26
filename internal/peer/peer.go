@@ -56,6 +56,8 @@ type Peer struct {
 	downloadSpeed metrics.Meter
 	uploadSpeed   metrics.Meter
 
+	InferredDownloadSpeed metrics.Meter
+
 	// Messages received while we don't have info yet are saved here.
 	Messages []interface{}
 
