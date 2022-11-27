@@ -134,6 +134,14 @@ func main() {
 					Name:  "outdir,o",
 					Usage: "output directory",
 				},
+				cli.Int64Flag{
+					Name:  "downloadlimit,dl",
+					Usage: "download limit speed",
+				},
+				cli.Int64Flag{
+					Name:  "uploadlimit,ul",
+					Usage: "upload limit speed",
+				},
 			},
 			Action: handleDd,
 		},
@@ -807,12 +815,16 @@ func handleDd(c *cli.Context) error {
 	resume := c.String("resume")
 	postfix := c.String("postfix")
 	outdir := c.String("outdir")
+	dl := c.Int64("downloadlimit")
+	ul := c.Int64("uploadlimit")
 	cfg, err := prepareConfig(c)
 	if err != nil {
 		return err
 	}
 	cfg.DataDir = "./" + outdir + "/"
 	cfg.DataDirIncludesTorrentID = false
+	cfg.SpeedLimitDownload = dl
+	cfg.SpeedLimitUpload = ul
 	var ih torrent.InfoHash
 	if isURI(arg) {
 		magnet, err := magnet.New(arg)
@@ -872,6 +884,14 @@ func handleDd(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
+
+	// Output log
+	f, err := os.Create(cfg.DataDir + "stats.log")
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	for {
@@ -895,6 +915,8 @@ func handleDd(c *cli.Context) error {
 			}
 			log.Infof("------------\n")
 			log.Infof("Status: %s, Progress: %d%%, Peers: %d, Speed: %dK/s, ETA: %s, Upload Speed %dK/s\n",
+				stats.Status.String(), progress, stats.Peers.Total, stats.Speed.Download/1024, eta, stats.Speed.Upload/1024)
+			fmt.Fprintf(f, "Status: %s, Progress: %d%%, Peers: %d, Speed: %dK/s, ETA: %s, Upload Speed %dK/s\n",
 				stats.Status.String(), progress, stats.Peers.Total, stats.Speed.Download/1024, eta, stats.Speed.Upload/1024)
 			for _, p := range peers {
 				log.Infof("\tPeer: %s, Download: %dK/s, Upload %dK/s\n",
