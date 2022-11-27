@@ -69,10 +69,15 @@ func (t *torrent) handlePieceWriteDone(pw *piecewriter.PieceWriter) {
 	// Tell everyone that we have this piece
 	for pe := range t.peers {
 		t.updateInterestedState(pe)
-		if pe.Bitfield.Test(pw.Piece.Index) {
-			// Skip peers having the piece to save bandwidth
-			continue
-		}
+		// FIXME CHANGE: we comment it out to others better infer our download
+		//       speed which, I believe, aligns with the BitTyrant paper.
+		//       An alternative is to use this + updated interested state to infer,
+		//       but I am unsure how much it can help by doing so, and it is not
+		//       the same strategy used in the original paper.
+		// if pe.Bitfield.Test(pw.Piece.Index) {
+			// // Skip peers having the piece to save bandwidth
+			// continue
+		// }
 		msg := peerprotocol.HaveMessage{Index: pw.Piece.Index}
 		pe.SendMessage(msg)
 	}

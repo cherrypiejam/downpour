@@ -3,6 +3,7 @@ package piecepicker
 import (
 	"fmt"
 	"sort"
+	"math/rand"
 
 	"downpour/internal/peer"
 	"downpour/internal/sliceset"
@@ -280,17 +281,28 @@ func (p *PiecePicker) pickRarest(pe *peer.Peer) *myPiece {
 	})
 	var picked *myPiece
 	var hasUnrequested bool
-	// Select unrequested piece
-	for _, mp := range p.piecesByAvailability {
-		if mp.Done || mp.Writing {
-			continue
+	if len(p.piecesByAvailability) > 0 {
+		// Randomly select unrequested piece
+		// FIXME use fixed size slices to avoid multiple allocations
+		// because a tie can have 1000+ pieces initially
+		tie := []*myPiece{}
+		for _, mp := range p.piecesByAvailability {
+			if len(p.piecesByAvailability[0].Having.Items) != len(mp.Having.Items) {
+				break
+			}
+			if mp.Done || mp.Writing {
+				continue
+			}
+			if mp.Requested.Len() == 0 {
+				if mp.Having.Has(pe) {
+					tie = append(tie, mp)
+				}
+				hasUnrequested = true
+			}
 		}
-		if mp.Requested.Len() == 0 && mp.Having.Has(pe) {
-			picked = mp
-			break
-		}
-		if mp.Requested.Len() == 0 {
-			hasUnrequested = true
+		if len(tie) > 0 {
+			brk := rand.Intn(len(tie)) // nolint: gosec
+			picked = tie[brk]
 		}
 	}
 	if picked == nil && !hasUnrequested {
