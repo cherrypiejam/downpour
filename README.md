@@ -7,6 +7,7 @@ TODOS
 --------
 - [x] Allow concurrent downloads of the same file (Experiment + Sybil)
 - [x] Disable fast enable extension (Experiment)
+- [x] Randomly select which piece to download (Experiment)
 - [ ] Make active set dynamically adjustable (BitTyrant)
-- [ ] Infer the download speed of each peer (BitTyrant)
-- [x] Randomly select which piece to download
+- [x] Infer the download speed of each peer (BitTyrant)
+- [ ] Fake fast download speed for reciprocation (BitRebel)
