@@ -134,6 +134,14 @@ func main() {
 					Name:  "outdir,o",
 					Usage: "output directory",
 				},
+				cli.Int64Flag{
+					Name:  "downloadlimit,dl",
+					Usage: "download limit speed",
+				},
+				cli.Int64Flag{
+					Name:  "uploadlimit,ul",
+					Usage: "upload limit speed",
+				},
 			},
 			Action: handleDd,
 		},
@@ -807,12 +815,16 @@ func handleDd(c *cli.Context) error {
 	resume := c.String("resume")
 	postfix := c.String("postfix")
 	outdir := c.String("outdir")
+	dl := c.Int64("downloadlimit")
+	ul := c.Int64("uploadlimit")
 	cfg, err := prepareConfig(c)
 	if err != nil {
 		return err
 	}
 	cfg.DataDir = "./" + outdir + "/"
 	cfg.DataDirIncludesTorrentID = false
+	cfg.SpeedLimitDownload = dl
+	cfg.SpeedLimitUpload = ul
 	var ih torrent.InfoHash
 	if isURI(arg) {
 		magnet, err := magnet.New(arg)

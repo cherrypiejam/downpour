@@ -114,6 +114,7 @@ func New(conn net.Conn, source peersource.Source, id [20]byte, extensions [8]byt
 		doneC:             make(chan struct{}),
 		downloadSpeed:     metrics.NewMeter(),
 		uploadSpeed:       metrics.NewMeter(),
+		InferredDownloadSpeed: metrics.NewMeter(),
 	}
 }
 
