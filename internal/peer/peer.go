@@ -53,6 +53,13 @@ type Peer struct {
 
 	Downloading bool
 
+	// BitTyrant parameters
+	estimatedDownloadSpeed int
+	reciprocalUploadSpeed int
+
+	//Calculate #rounds being choked/unchoked
+	unchokedRounds int
+
 	downloadSpeed metrics.Meter
 	uploadSpeed   metrics.Meter
 
@@ -112,6 +119,8 @@ func New(conn net.Conn, source peersource.Source, id [20]byte, extensions [8]byt
 		snubTimer:         t,
 		closeC:            make(chan struct{}),
 		doneC:             make(chan struct{}),
+		estimatedDownloadSpeed: 8,
+		reciprocalUploadSpeed: 8,	// constant values for now
 		downloadSpeed:     metrics.NewMeter(),
 		uploadSpeed:       metrics.NewMeter(),
 		InferredDownloadSpeed: metrics.NewMeter(),
@@ -210,6 +219,26 @@ func (p *Peer) ResetSnubTimer() {
 // StopSnubTimer is used to stop the timer that is for detecting if the Peer is snub.
 func (p *Peer) StopSnubTimer() {
 	p.snubTimer.Stop()
+}
+
+func (p *Peer) UnchokedRounds() int {
+	return p.unchokedRounds
+}
+
+func (p *Peer) SetUnchokedRounds(r int) {
+	p.unchokedRounds = r
+}
+
+func (p *Peer) EstimatedDownloadSpeed() int {
+	return p.estimatedDownloadSpeed
+}
+
+func (p *Peer) ReciprocalUploadSpeed() int {
+	return p.reciprocalUploadSpeed
+}
+
+func (p *Peer) SetReciprocalUploadSpeed(speed int) {
+	p.reciprocalUploadSpeed = speed
 }
 
 // DownloadSpeed of the Peer in bytes per second.

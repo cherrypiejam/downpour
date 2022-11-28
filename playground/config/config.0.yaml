@@ -1,6 +1,6 @@
 ---
-  database: "~/software/p2p/downpour/playground/data/0/session.db"
-  datadir: "~/software/p2p/downpour/playground/data/0/"
+  database: "data/0/session.db"
+  datadir: "data/0/"
   unchokedpeers: 3
   rpcenabled: false
   dhtenabled: false
