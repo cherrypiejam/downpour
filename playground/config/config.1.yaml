@@ -4,3 +4,5 @@
   unchokedpeers: 3
   rpcenabled: false
   dhtenabled: false
+  # speedlimitdownload: 50
+  # speedlimitupload: 50

@@ -63,6 +63,8 @@ type Peer struct {
 	downloadSpeed metrics.Meter
 	uploadSpeed   metrics.Meter
 
+	InferredDownloadSpeed metrics.Meter
+
 	// Messages received while we don't have info yet are saved here.
 	Messages []interface{}
 
@@ -121,6 +123,7 @@ func New(conn net.Conn, source peersource.Source, id [20]byte, extensions [8]byt
 		reciprocalUploadSpeed: 8,	// constant values for now
 		downloadSpeed:     metrics.NewMeter(),
 		uploadSpeed:       metrics.NewMeter(),
+		InferredDownloadSpeed: metrics.NewMeter(),
 	}
 }
 
