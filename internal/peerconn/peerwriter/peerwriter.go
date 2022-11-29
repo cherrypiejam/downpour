@@ -240,15 +240,7 @@ func (p *PeerWriter) messageWriter() {
 					return
 				}
 
-				// d := p.bucket.Take(int64(buf.Len()))
-				// select {
-				// case <-time.After(d):
-				// case <-p.stopC:
-					// return
-				// }
-
 				// TODO peer bucket
-
 			}
 
 			n, err := p.conn.Write(buf.Bytes())
