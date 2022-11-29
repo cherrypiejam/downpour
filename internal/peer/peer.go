@@ -53,6 +53,17 @@ type Peer struct {
 
 	Downloading bool
 
+	// BitTyrant parameters
+	estimatedContribution int
+	estimatedReciprocation int
+	// reciprocalUploadSpeed int
+	// estimatedDownloadSpeed int
+
+	EstimatedReciprocation metrics.Meter
+
+	// Calculate # rounds being unchoked
+	unchokedRounds int
+
 	downloadSpeed metrics.Meter
 	uploadSpeed   metrics.Meter
 
@@ -110,8 +121,11 @@ func New(conn net.Conn, source peersource.Source, id [20]byte, extensions [8]byt
 		snubTimer:         t,
 		closeC:            make(chan struct{}),
 		doneC:             make(chan struct{}),
+		estimatedReciprocation: 8,
+		estimatedContribution: 8,	// constant values for now
 		downloadSpeed:     metrics.NewMeter(),
 		uploadSpeed:       metrics.NewMeter(),
+		EstimatedReciprocation: metrics.NewMeter(),
 	}
 }
 
@@ -209,6 +223,33 @@ func (p *Peer) StopSnubTimer() {
 	p.snubTimer.Stop()
 }
 
+func (p *Peer) UnchokedRounds() int {
+	return p.unchokedRounds
+}
+
+func (p *Peer) SetUnchokedRounds(r int) {
+	p.unchokedRounds = r
+}
+
+func (p *Peer) DownloadReciprocation() int {
+	if ds := p.DownloadSpeed(); ds > 0 {
+		return ds
+	}
+	return p.estimatedReciprocation
+}
+
+func (p *Peer) SetEstimatedReciprocation() {
+	p.estimatedReciprocation = int(p.EstimatedReciprocation.Rate1())
+}
+
+func (p *Peer) UploadContribution() int {
+	return p.estimatedContribution
+}
+
+func (p *Peer) SetUploadContribution(speed int) {
+	p.estimatedContribution = speed
+}
+
 // DownloadSpeed of the Peer in bytes per second.
 func (p *Peer) DownloadSpeed() int {
 	return int(p.downloadSpeed.Rate1())
@@ -239,6 +280,11 @@ func (p *Peer) Choking() bool {
 // Interested returns true if remote Peer is interested for pieces we have.
 func (p *Peer) Interested() bool {
 	return p.PeerInterested
+}
+
+// ChockingUs returns true if remote Peer is chocking us.
+func (p *Peer) ChokingUs() bool {
+	return p.PeerChoking
 }
 
 // Optimistic returns true if we are unchoking the Peer optimistically.

@@ -1,6 +1,8 @@
 ---
-  database: "~/software/p2p/downpour/playground/data/1/session.db"
-  datadir: "~/software/p2p/downpour/playground/data/1/"
+  database: "data/1/session.db"
+  datadir: "data/1/"
   unchokedpeers: 3
   rpcenabled: false
   dhtenabled: false
+  # speedlimitdownload: 50
+  # speedlimitupload: 50
