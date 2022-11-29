@@ -25,7 +25,7 @@ import (
 	"downpour/internal/tracker"
 	"downpour/internal/trackermanager"
 
-	"github.com/juju/ratelimit"
+	"golang.org/x/time/rate"
 	"github.com/mitchellh/go-homedir"
 	"github.com/nictuku/dht"
 	"go.etcd.io/bbolt"
@@ -55,8 +55,8 @@ type Session struct {
 	createdAt      time.Time
 	semWrite       *semaphore.Semaphore
 	metrics        *sessionMetrics
-	bucketDownload *ratelimit.Bucket
-	bucketUpload   *ratelimit.Bucket
+	bucketDownload *rate.Limiter
+	bucketUpload   *rate.Limiter
 	closeC         chan struct{}
 
 	mPeerRequests   sync.Mutex
@@ -197,11 +197,11 @@ func NewSession(cfg Config) (*Session, error) {
 	}
 	dlSpeed := cfg.SpeedLimitDownload * 1024
 	if cfg.SpeedLimitDownload > 0 {
-		c.bucketDownload = ratelimit.NewBucketWithRate(float64(dlSpeed), dlSpeed)
+		c.bucketDownload = rate.NewLimiter(rate.Limit(float64(dlSpeed)), dlSpeed)
 	}
 	ulSpeed := cfg.SpeedLimitUpload * 1024
 	if cfg.SpeedLimitUpload > 0 {
-		c.bucketUpload = ratelimit.NewBucketWithRate(float64(ulSpeed), ulSpeed)
+		c.bucketUpload = rate.NewLimiter(rate.Limit(float64(ulSpeed)), ulSpeed)
 	}
 	err = c.startBlocklistReloader()
 	if err != nil {

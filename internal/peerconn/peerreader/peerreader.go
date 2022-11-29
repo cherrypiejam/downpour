@@ -8,12 +8,13 @@ import (
 	"io"
 	"net"
 	"time"
+	"context"
 
 	"downpour/internal/bufferpool"
 	"downpour/internal/logger"
 	"downpour/internal/peerprotocol"
 	"downpour/internal/piece"
-	"github.com/juju/ratelimit"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -33,14 +34,14 @@ type PeerReader struct {
 	r            io.Reader
 	log          logger.Logger
 	pieceTimeout time.Duration
-	bucket       *ratelimit.Bucket
+	bucket       *rate.Limiter
 	messages     chan interface{}
 	stopC        chan struct{}
 	doneC        chan struct{}
 }
 
 // New returns a new PeerReader by wrapping a net.Conn.
-func New(conn net.Conn, l logger.Logger, pieceTimeout time.Duration, b *ratelimit.Bucket) *PeerReader {
+func New(conn net.Conn, l logger.Logger, pieceTimeout time.Duration, b *rate.Limiter) *PeerReader {
 	return &PeerReader{
 		conn:         conn,
 		r:            bufio.NewReaderSize(conn, readBufferSize),
@@ -268,13 +269,16 @@ func (p *PeerReader) readPiece(length uint32) (buf bufferpool.Buffer, err error)
 	var n, m int
 	for {
 		if p.bucket != nil {
-			d := p.bucket.Take(int64(length))
-			select {
-			case <-time.After(d):
-			case <-p.stopC:
-				err = errStoppedWhileWaitingBucket
+			err = p.bucket.WaitN(context.Background(), int(length))
+			if err != nil {
 				return
 			}
+			// select {
+			// case <-time.After(d):
+			// case <-p.stopC:
+				// err = errStoppedWhileWaitingBucket
+				// return
+			// }
 		}
 
 		err = p.conn.SetReadDeadline(time.Now().Add(p.pieceTimeout))

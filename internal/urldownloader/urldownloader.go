@@ -11,14 +11,14 @@ import (
 
 	"downpour/internal/bufferpool"
 	"downpour/internal/piece"
-	"github.com/juju/ratelimit"
+	"golang.org/x/time/rate"
 )
 
 // URLDownloader downloads files from a HTTP source.
 type URLDownloader struct {
 	URL                 string
 	Begin, End, current uint32 // piece index
-	bucket              *ratelimit.Bucket
+	bucket              *rate.Limiter
 	closeC, doneC       chan struct{}
 }
 
@@ -32,7 +32,7 @@ type PieceResult struct {
 }
 
 // New returns a new URLDownloader for the given source and piece range.
-func New(source string, begin, end uint32, b *ratelimit.Bucket) *URLDownloader {
+func New(source string, begin, end uint32, b *rate.Limiter) *URLDownloader {
 	return &URLDownloader{
 		URL:     source,
 		Begin:   begin,
@@ -116,12 +116,16 @@ func (d *URLDownloader) Run(client *http.Client, pieces []piece.Piece, multifile
 		for m < job.Length {
 			readSize := calcReadSize(buf, n, job, m)
 			if d.bucket != nil {
-				waitDuration := d.bucket.Take(readSize)
-				select {
-				case <-time.After(waitDuration):
-				case <-d.closeC:
+				err = d.bucket.WaitN(context.Background(), int(readSize))
+				if err != nil {
 					return false
 				}
+				// waitDuration := d.bucket.Take(readSize)
+				// select {
+				// case <-time.After(waitDuration):
+				// case <-d.closeC:
+					// return false
+				// }
 			}
 			o, err := readFull(resp.Body, buf.Data[n:int64(n)+readSize], timer, readTimeout)
 			if err != nil {
