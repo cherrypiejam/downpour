@@ -1,9 +1,10 @@
 package unchoker
 
 import (
+	"fmt"
+	"math"
 	"math/rand"
 	"sort"
-	"fmt"
 )
 
 // Unchoker implements an algorithm to select peers to unchoke based on their download speed.
@@ -51,22 +52,27 @@ type Peer interface {
 	SetEstimatedReciprocation()
 	UploadContribution() int
 	SetUploadContribution(speed int)
+	SetUploadLimit(speed int)
 
 	DownloadSpeed() int
 	UploadSpeed() int
 }
 
 // New returns a new Unchoker.
-func New(numUnchoked, numOptimisticUnchoked int) *Unchoker {
+func New(numUnchoked, numOptimisticUnchoked, speedLimitUpload int) *Unchoker {
+	capacity := math.MaxInt
+	if speedLimitUpload > 0 {
+		capacity = speedLimitUpload
+	}
 	return &Unchoker{
 		numUnchoked:             numUnchoked,
 		numOptimisticUnchoked:   numOptimisticUnchoked,
 		peersUnchoked:           make(map[Peer]struct{}, numUnchoked),
 		peersUnchokedOptimistic: make(map[Peer]struct{}, numUnchoked),
-		Capacity: 64,	// Constant values for now
-		UnchokeRoundsThres: 3,
-		Delta: 0.2,
-		Gamma: 0.1,
+		Capacity:                capacity,
+		UnchokeRoundsThres:      3,
+		Delta:                   0.2,
+		Gamma:                   0.1,
 	}
 }
 
@@ -86,13 +92,14 @@ func (u *Unchoker) candidatesUnchoke(allPeers []Peer) []Peer {
 	return peers
 }
 
-func (u *Unchoker) sortPeers(peers []Peer, completed bool) {
-	byUploadSpeed := func(i, j int) bool { return peers[i].UploadSpeed() > peers[j].UploadSpeed() }
-	byDownloadSpeed := func(i, j int) bool { return peers[i].DownloadSpeed() > peers[j].DownloadSpeed() }
-	if completed {
-		sort.Slice(peers, byUploadSpeed)
+
+// TickUnchoke must be called at every 10 seconds.
+func (u *Unchoker) TickUnchoke(allPeers []Peer, torrentCompleted bool) {
+	if torrentCompleted {
+		// When completed, we switch to the naive unchoke
+		u.TickVanillaUnchoke(allPeers, true)
 	} else {
-		sort.Slice(peers, byDownloadSpeed)
+		u.TickTyrantUnchoke(allPeers)
 	}
 }
 
@@ -109,59 +116,64 @@ func (u *Unchoker) sortPeersByRatio(peers []Peer) {
 }
 
 // BitTyrant's periodic 'unchoke'
-func (u *Unchoker) TickTyrantUnchoke(allPeers []Peer, torrentCompleted bool) {
+func (u *Unchoker) TickTyrantUnchoke(allPeers []Peer) {
 
 	fmt.Println("------------- In Tyrant Unchoke() -------------")
 	peers := u.candidatesUnchoke(allPeers)
 
-
-	// update u_p based on rounds of being choked/unchoked
-	// Only update peers that are unchoked
-	// FIXME if peer p unchoked/choked US, we update
+	// Adjust
 	for _, pe := range peers {
-		if pe.ChokingUs() {
+		if pe.ChokingUs() { // When completed, everyone is choking us
 			pe.SetUnchokedRounds(0)
 			pe.SetUploadContribution(int(float32(pe.UploadContribution()) * (1 + u.Delta)))
-			// TODO set upload token bucket
 		} else {
 			pe.SetEstimatedReciprocation()
 			pe.SetUnchokedRounds((pe.UnchokedRounds() + 1) % u.UnchokeRoundsThres)
 			if pe.UnchokedRounds() == 0 {
 				pe.SetUploadContribution(int(float32(pe.UploadContribution()) * (1 - u.Gamma)))
-				// TODO set upload token bucket
 			}
 		}
 	}
 
 	u.sortPeersByRatio(peers)
 
-	// Capacity is the total upload limit (int64, KB)
-	// each time before unchoke, we update this peer's token bucket with it's upload speed (int64)
-	// each peer has a token bucket for upload
-	// estimated download speed is a Meter, to get the value, use rate1()
-
 	// bugdet of upload speed
 	var budget int = 0
-
 	var i int
+
+	// Capacity is the total upload limit (int, KB)
 	for i = 0; i < len(peers) && budget < u.Capacity; i++ {
 		if budget + peers[i].UploadContribution() > u.Capacity{
+			// // FIXME not working?
+			// fmt.Printf(">>>>>>>>>> %d\n", u.Capacity - budget)
+			peers[i].SetUploadLimit(u.Capacity - budget) // take a shot
+			i += 1
 			break
 		}
 		budget = budget + peers[i].UploadContribution()
+		// We adjust token bucket size for a peer before unchoke it
+		// to minimize allocation overheads
+		peers[i].SetUploadLimit(peers[i].UploadContribution())
 		u.unchokePeer(peers[i])
 	}
 
 	peers = peers[i:]
-
 	for _, pe := range peers {
 		u.chokePeer(pe)
 	}
-	// u.round = (u.round + 1) % 3
 }
 
-// TickUnchoke must be called at every 10 seconds.
-func (u *Unchoker) TickUnchoke(allPeers []Peer, torrentCompleted bool) {
+func (u *Unchoker) sortPeers(peers []Peer, completed bool) {
+	byUploadSpeed := func(i, j int) bool { return peers[i].UploadSpeed() > peers[j].UploadSpeed() }
+	byDownloadSpeed := func(i, j int) bool { return peers[i].DownloadSpeed() > peers[j].DownloadSpeed() }
+	if completed {
+		sort.Slice(peers, byUploadSpeed)
+	} else {
+		sort.Slice(peers, byDownloadSpeed)
+	}
+}
+
+func (u *Unchoker) TickVanillaUnchoke(allPeers []Peer, torrentCompleted bool) {
 	optimistic := u.round == 0
 	peers := u.candidatesUnchoke(allPeers)
 	u.sortPeers(peers, torrentCompleted)

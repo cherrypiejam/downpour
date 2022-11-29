@@ -85,6 +85,10 @@ func (p *Conn) CancelRequest(msg peerprotocol.CancelMessage) {
 	p.writer.CancelRequest(msg)
 }
 
+func (p *Conn) SetUploadLimit(speed int) {
+	p.writer.SetUploadLimit(speed)
+}
+
 // Run starts receiving messages from peer and starts sending queued messages.
 // If any error happens during receiving or sending messages,
 // the connection and the underlying net.Conn will be closed.

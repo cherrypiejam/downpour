@@ -385,7 +385,7 @@ func newTorrent2(
 	if err != nil {
 		return nil, err
 	}
-	t.unchoker = unchoker.New(cfg.UnchokedPeers, cfg.OptimisticUnchokedPeers)
+	t.unchoker = unchoker.New(cfg.UnchokedPeers, cfg.OptimisticUnchokedPeers, cfg.SpeedLimitUpload)
 	go t.run()
 	return t, nil
 }

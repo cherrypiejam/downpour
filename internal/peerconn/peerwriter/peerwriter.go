@@ -30,6 +30,7 @@ type PeerWriter struct {
 	messages              chan interface{}
 	servedRequests        map[peerprotocol.RequestMessage]struct{}
 	bucket                *rate.Limiter
+	bkt                   *rate.Limiter // inner bucket for upload contribution
 	log                   logger.Logger
 	stopC                 chan struct{}
 	doneC                 chan struct{}
@@ -234,13 +235,20 @@ func (p *PeerWriter) messageWriter() {
 			// Put message ID
 			buf.Bytes()[4] = uint8(msg.ID())
 
-			if _, ok := msg.(Piece); ok && p.bucket != nil {
-				err = p.bucket.WaitN(context.Background(), buf.Len())
-				if err != nil {
-					return
+			if _, ok := msg.(Piece); ok {
+				// Keep around the upload contribution limit
+				if p.bkt != nil {
+					err = p.bkt.WaitN(context.Background(), buf.Len())
+					if err != nil {
+						return
+					}
 				}
-
-				// TODO peer bucket
+				if p.bucket != nil {
+					err = p.bucket.WaitN(context.Background(), buf.Len())
+					if err != nil {
+						return
+					}
+				}
 			}
 
 			n, err := p.conn.Write(buf.Bytes())
@@ -268,6 +276,17 @@ func (p *PeerWriter) messageWriter() {
 		case <-p.stopC:
 			return
 		}
+	}
+}
+
+// TODO adjust bkt limit in KB
+func (p *PeerWriter) SetUploadLimit(speed int) {
+	ulSpeed := speed * 1024
+	if p.bkt == nil {
+		p.bkt = rate.NewLimiter(rate.Limit(float64(ulSpeed)), ulSpeed)
+	} else {
+		p.bkt.SetLimit(rate.Limit(float64(ulSpeed)))
+		p.bkt.SetBurst(ulSpeed)
 	}
 }
 

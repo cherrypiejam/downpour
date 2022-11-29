@@ -73,8 +73,8 @@ func (t *torrent) run() {
 		case pe := <-t.peerSnubbedC:
 			t.handlePeerSnubbed(pe)
 		case <-t.unchokeTicker.C:
-			// t.unchoker.TickUnchoke(t.getPeersForUnchoker(), t.completed)
-			t.unchoker.TickTyrantUnchoke(t.getPeersForUnchoker(), t.completed)
+			t.unchoker.TickUnchoke(t.getPeersForUnchoker(), t.completed)
+			// t.unchoker.TickTyrantUnchoke(t.getPeersForUnchoker(), t.completed)
 		case ih := <-t.incomingHandshakerResultC:
 			t.handleIncomingHandshakeDone(ih)
 		case oh := <-t.outgoingHandshakerResultC:

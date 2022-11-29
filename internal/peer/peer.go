@@ -121,8 +121,8 @@ func New(conn net.Conn, source peersource.Source, id [20]byte, extensions [8]byt
 		snubTimer:         t,
 		closeC:            make(chan struct{}),
 		doneC:             make(chan struct{}),
-		estimatedReciprocation: 8,
-		estimatedContribution: 8,	// constant values for now
+		estimatedReciprocation: 100, // TODO adjust estimated init rate
+		estimatedContribution: 100,	// constant values for now
 		downloadSpeed:     metrics.NewMeter(),
 		uploadSpeed:       metrics.NewMeter(),
 		EstimatedReciprocation: metrics.NewMeter(),
@@ -352,4 +352,8 @@ func (p *Peer) GenerateAndSendAllowedFastMessages(k int, numPieces uint32, infoH
 		p.SentAllowedFast.Add(&pieces[index])
 		p.SendMessage(peerprotocol.AllowedFastMessage{HaveMessage: peerprotocol.HaveMessage{Index: index}})
 	}
+}
+
+func (p *Peer) SetUploadLimit(speed int) {
+	p.Conn.SetUploadLimit(speed)
 }
