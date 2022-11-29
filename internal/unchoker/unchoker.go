@@ -37,16 +37,20 @@ type Peer interface {
 	// Interested returns interest status of remote peer
 	Interested() bool
 
+	// ChokingUs returns chocking status of remote peer
+	ChokingUs() bool
+
 	// SetOptimistic sets the uptimistic unchoke status of peer
 	SetOptimistic(value bool)
 	// OptimisticUnchoked returns the value previously set by SetOptimistic
 	Optimistic() bool
 
 	UnchokedRounds() int
-	SetUnchokedRounds(r int) 
-	EstimatedDownloadSpeed() int
-	ReciprocalUploadSpeed() int
-	SetReciprocalUploadSpeed(speed int)
+	SetUnchokedRounds(r int)
+	DownloadReciprocation() int
+	SetEstimatedReciprocation()
+	UploadContribution() int
+	SetUploadContribution(speed int)
 
 	DownloadSpeed() int
 	UploadSpeed() int
@@ -62,7 +66,7 @@ func New(numUnchoked, numOptimisticUnchoked int) *Unchoker {
 		Capacity: 64,	// Constant values for now
 		UnchokeRoundsThres: 3,
 		Delta: 0.2,
-		Gamma: 0.3,
+		Gamma: 0.1,
 	}
 }
 
@@ -94,14 +98,13 @@ func (u *Unchoker) sortPeers(peers []Peer, completed bool) {
 
 // BitTyrant sort peers by d_p/u_p
 func (u *Unchoker) sortPeersByRatio(peers []Peer) {
-	byRatio := func(i, j int) bool { 
-		if peers[i].ReciprocalUploadSpeed() == 0.0 {
+	byRatio := func(i, j int) bool {
+		if peers[i].UploadContribution() == 0 {
 			return true
 		}
-		return peers[i].EstimatedDownloadSpeed() / peers[i].ReciprocalUploadSpeed() > 
-			   peers[j].EstimatedDownloadSpeed() / peers[j].ReciprocalUploadSpeed()
+		return peers[i].DownloadReciprocation() / peers[i].UploadContribution() >
+			   peers[j].DownloadReciprocation() / peers[j].UploadContribution()
 	}
-
 	sort.Slice(peers, byRatio)
 }
 
@@ -111,32 +114,41 @@ func (u *Unchoker) TickTyrantUnchoke(allPeers []Peer, torrentCompleted bool) {
 	fmt.Println("------------- In Tyrant Unchoke() -------------")
 	peers := u.candidatesUnchoke(allPeers)
 
-	var i int
 
 	// update u_p based on rounds of being choked/unchoked
 	// Only update peers that are unchoked
-	for pe := range u.peersUnchoked {
-		if pe.DownloadSpeed() > 0.0{
-			pe.SetUnchokedRounds((pe.UnchokedRounds() + 1) % u.UnchokeRoundsThres)
-			if pe.UnchokedRounds() == 0{
-				pe.SetReciprocalUploadSpeed(int(float32(pe.ReciprocalUploadSpeed()) * (1 - u.Gamma)))
-			}
-		} else {
+	// FIXME if peer p unchoked/choked US, we update
+	for _, pe := range peers {
+		if pe.ChokingUs() {
 			pe.SetUnchokedRounds(0)
-			pe.SetReciprocalUploadSpeed(int(float32(pe.ReciprocalUploadSpeed()) * (1 + u.Delta)))
+			pe.SetUploadContribution(int(float32(pe.UploadContribution()) * (1 + u.Delta)))
+			// TODO set upload token bucket
+		} else {
+			pe.SetEstimatedReciprocation()
+			pe.SetUnchokedRounds((pe.UnchokedRounds() + 1) % u.UnchokeRoundsThres)
+			if pe.UnchokedRounds() == 0 {
+				pe.SetUploadContribution(int(float32(pe.UploadContribution()) * (1 - u.Gamma)))
+				// TODO set upload token bucket
+			}
 		}
 	}
+
 	u.sortPeersByRatio(peers)
-	
+
+	// Capacity is the total upload limit (int64, KB)
+	// each time before unchoke, we update this peer's token bucket with it's upload speed (int64)
+	// each peer has a token bucket for upload
+	// estimated download speed is a Meter, to get the value, use rate1()
+
 	// bugdet of upload speed
 	var budget int = 0
 
+	var i int
 	for i = 0; i < len(peers) && budget < u.Capacity; i++ {
-		if budget + peers[i].ReciprocalUploadSpeed() > u.Capacity{
+		if budget + peers[i].UploadContribution() > u.Capacity{
 			break
 		}
-
-		budget = budget + peers[i].ReciprocalUploadSpeed()
+		budget = budget + peers[i].UploadContribution()
 		u.unchokePeer(peers[i])
 	}
 

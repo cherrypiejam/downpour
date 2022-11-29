@@ -240,6 +240,7 @@ func (p *PeerWriter) messageWriter() {
 				case <-p.stopC:
 					return
 				}
+				// TODO peer bucket
 			}
 
 			n, err := p.conn.Write(buf.Bytes())

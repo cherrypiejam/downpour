@@ -136,7 +136,7 @@ func (t *torrent) handlePeerMessage(pm peer.Message) {
 		// d_pe
 		// FIXME Window size might be too large,
 		// use the time between two have messages instead
-		pe.InferredDownloadSpeed.Mark(int64(t.info.PieceLength))
+		pe.EstimatedReciprocation.Mark(int64(t.info.PieceLength))
 
 	case peerprotocol.BitfieldMessage:
 		// Save bitfield messages while we don't have info yet.

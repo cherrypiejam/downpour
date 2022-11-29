@@ -54,16 +54,18 @@ type Peer struct {
 	Downloading bool
 
 	// BitTyrant parameters
-	estimatedDownloadSpeed int
-	reciprocalUploadSpeed int
+	estimatedContribution int
+	estimatedReciprocation int
+	// reciprocalUploadSpeed int
+	// estimatedDownloadSpeed int
 
-	//Calculate #rounds being choked/unchoked
+	EstimatedReciprocation metrics.Meter
+
+	// Calculate # rounds being unchoked
 	unchokedRounds int
 
 	downloadSpeed metrics.Meter
 	uploadSpeed   metrics.Meter
-
-	InferredDownloadSpeed metrics.Meter
 
 	// Messages received while we don't have info yet are saved here.
 	Messages []interface{}
@@ -119,11 +121,11 @@ func New(conn net.Conn, source peersource.Source, id [20]byte, extensions [8]byt
 		snubTimer:         t,
 		closeC:            make(chan struct{}),
 		doneC:             make(chan struct{}),
-		estimatedDownloadSpeed: 8,
-		reciprocalUploadSpeed: 8,	// constant values for now
+		estimatedReciprocation: 8,
+		estimatedContribution: 8,	// constant values for now
 		downloadSpeed:     metrics.NewMeter(),
 		uploadSpeed:       metrics.NewMeter(),
-		InferredDownloadSpeed: metrics.NewMeter(),
+		EstimatedReciprocation: metrics.NewMeter(),
 	}
 }
 
@@ -229,16 +231,23 @@ func (p *Peer) SetUnchokedRounds(r int) {
 	p.unchokedRounds = r
 }
 
-func (p *Peer) EstimatedDownloadSpeed() int {
-	return p.estimatedDownloadSpeed
+func (p *Peer) DownloadReciprocation() int {
+	if ds := p.DownloadSpeed(); ds > 0 {
+		return ds
+	}
+	return p.estimatedReciprocation
 }
 
-func (p *Peer) ReciprocalUploadSpeed() int {
-	return p.reciprocalUploadSpeed
+func (p *Peer) SetEstimatedReciprocation() {
+	p.estimatedReciprocation = int(p.EstimatedReciprocation.Rate1())
 }
 
-func (p *Peer) SetReciprocalUploadSpeed(speed int) {
-	p.reciprocalUploadSpeed = speed
+func (p *Peer) UploadContribution() int {
+	return p.estimatedContribution
+}
+
+func (p *Peer) SetUploadContribution(speed int) {
+	p.estimatedContribution = speed
 }
 
 // DownloadSpeed of the Peer in bytes per second.
@@ -271,6 +280,11 @@ func (p *Peer) Choking() bool {
 // Interested returns true if remote Peer is interested for pieces we have.
 func (p *Peer) Interested() bool {
 	return p.PeerInterested
+}
+
+// ChockingUs returns true if remote Peer is chocking us.
+func (p *Peer) ChokingUs() bool {
+	return p.PeerChoking
 }
 
 // Optimistic returns true if we are unchoking the Peer optimistically.
