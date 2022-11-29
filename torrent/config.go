@@ -67,9 +67,9 @@ type Config struct {
 	// Time to wait when resolving host names for trackers and peers.
 	DNSResolveTimeout time.Duration
 	// Global download speed limit in KB/s.
-	SpeedLimitDownload int64
+	SpeedLimitDownload int
 	// Global upload speed limit in KB/s.
-	SpeedLimitUpload int64
+	SpeedLimitUpload int
 	// Start torrent automatically if it was running when previous session was closed.
 	ResumeOnStartup bool
 	// Check each torrent loop for aliveness. Helps to detect bugs earlier.

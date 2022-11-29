@@ -9,7 +9,7 @@ import (
 	"downpour/internal/peerconn/peerreader"
 	"downpour/internal/peerconn/peerwriter"
 	"downpour/internal/peerprotocol"
-	"github.com/juju/ratelimit"
+	"golang.org/x/time/rate"
 )
 
 // Conn is a peer connection that provides a channel for receiving messages and methods for sending messages.
@@ -24,7 +24,7 @@ type Conn struct {
 }
 
 // New returns a new PeerConn by wrapping a net.Conn.
-func New(conn net.Conn, l logger.Logger, pieceTimeout time.Duration, maxRequestsIn int, fastEnabled bool, br, bw *ratelimit.Bucket) *Conn {
+func New(conn net.Conn, l logger.Logger, pieceTimeout time.Duration, maxRequestsIn int, fastEnabled bool, br, bw *rate.Limiter) *Conn {
 	return &Conn{
 		conn:     conn,
 		reader:   peerreader.New(conn, l, pieceTimeout, br),

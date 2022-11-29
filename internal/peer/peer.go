@@ -19,7 +19,7 @@ import (
 	"downpour/internal/piece"
 	"downpour/internal/sliceset"
 	"downpour/internal/stringutil"
-	"github.com/juju/ratelimit"
+	"golang.org/x/time/rate"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -87,7 +87,7 @@ type PieceMessage struct {
 }
 
 // New wraps the net.Conn and returns a new Peer.
-func New(conn net.Conn, source peersource.Source, id [20]byte, extensions [8]byte, cipher mse.CryptoMethod, pieceReadTimeout, snubTimeout time.Duration, maxRequestsIn int, br, bw *ratelimit.Bucket) *Peer {
+func New(conn net.Conn, source peersource.Source, id [20]byte, extensions [8]byte, cipher mse.CryptoMethod, pieceReadTimeout, snubTimeout time.Duration, maxRequestsIn int, br, bw *rate.Limiter) *Peer {
 	bf, _ := bitfield.NewBytes(extensions[:], 64)
 	fastEnabled := bf.Test(61)
 	extensionsEnabled := bf.Test(43)

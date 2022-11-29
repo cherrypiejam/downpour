@@ -7,11 +7,12 @@ import (
 	"io"
 	"net"
 	"time"
+	"context"
 
 	"downpour/internal/logger"
 	"downpour/internal/peerconn/peerreader"
 	"downpour/internal/peerprotocol"
-	"github.com/juju/ratelimit"
+	"golang.org/x/time/rate"
 )
 
 const keepAlivePeriod = 2 * time.Minute
@@ -28,14 +29,14 @@ type PeerWriter struct {
 	writeC                chan peerprotocol.Message
 	messages              chan interface{}
 	servedRequests        map[peerprotocol.RequestMessage]struct{}
-	bucket                *ratelimit.Bucket
+	bucket                *rate.Limiter
 	log                   logger.Logger
 	stopC                 chan struct{}
 	doneC                 chan struct{}
 }
 
 // New returns a new PeerWriter by wrapping a net.Conn.
-func New(conn net.Conn, l logger.Logger, maxQueuedRequests int, fastEnabled bool, b *ratelimit.Bucket) *PeerWriter {
+func New(conn net.Conn, l logger.Logger, maxQueuedRequests int, fastEnabled bool, b *rate.Limiter) *PeerWriter {
 	return &PeerWriter{
 		conn:              conn,
 		queueC:            make(chan peerprotocol.Message),
@@ -234,12 +235,16 @@ func (p *PeerWriter) messageWriter() {
 			buf.Bytes()[4] = uint8(msg.ID())
 
 			if _, ok := msg.(Piece); ok && p.bucket != nil {
-				d := p.bucket.Take(int64(buf.Len()))
-				select {
-				case <-time.After(d):
-				case <-p.stopC:
+				err = p.bucket.WaitN(context.Background(), buf.Len())
+				if err != nil {
 					return
 				}
+				// d := p.bucket.Take(int64(buf.Len()))
+				// select {
+				// case <-time.After(d):
+				// case <-p.stopC:
+					// return
+				// }
 			}
 
 			n, err := p.conn.Write(buf.Bytes())

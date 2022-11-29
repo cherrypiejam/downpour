@@ -134,11 +134,11 @@ func main() {
 					Name:  "outdir,o",
 					Usage: "output directory",
 				},
-				cli.Int64Flag{
+				cli.IntFlag{
 					Name:  "downloadlimit,dl",
 					Usage: "download limit speed",
 				},
-				cli.Int64Flag{
+				cli.IntFlag{
 					Name:  "uploadlimit,ul",
 					Usage: "upload limit speed",
 				},
@@ -815,8 +815,8 @@ func handleDd(c *cli.Context) error {
 	resume := c.String("resume")
 	postfix := c.String("postfix")
 	outdir := c.String("outdir")
-	dl := c.Int64("downloadlimit")
-	ul := c.Int64("uploadlimit")
+	dl := c.Int("downloadlimit")
+	ul := c.Int("uploadlimit")
 	cfg, err := prepareConfig(c)
 	if err != nil {
 		return err
