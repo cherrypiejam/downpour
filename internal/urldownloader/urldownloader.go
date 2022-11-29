@@ -120,12 +120,6 @@ func (d *URLDownloader) Run(client *http.Client, pieces []piece.Piece, multifile
 				if err != nil {
 					return false
 				}
-				// waitDuration := d.bucket.Take(readSize)
-				// select {
-				// case <-time.After(waitDuration):
-				// case <-d.closeC:
-					// return false
-				// }
 			}
 			o, err := readFull(resp.Body, buf.Data[n:int64(n)+readSize], timer, readTimeout)
 			if err != nil {

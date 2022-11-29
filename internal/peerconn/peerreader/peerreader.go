@@ -273,12 +273,6 @@ func (p *PeerReader) readPiece(length uint32) (buf bufferpool.Buffer, err error)
 			if err != nil {
 				return
 			}
-			// select {
-			// case <-time.After(d):
-			// case <-p.stopC:
-				// err = errStoppedWhileWaitingBucket
-				// return
-			// }
 		}
 
 		err = p.conn.SetReadDeadline(time.Now().Add(p.pieceTimeout))
