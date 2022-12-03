@@ -827,9 +827,9 @@ func handleDd(c *cli.Context) error {
 	cfg.DataDirIncludesTorrentID = false
 	cfg.SpeedLimitDownload = dl
 	cfg.SpeedLimitUpload = ul
-    if cfg.SpeedLimitUpload > 0 {
-        cfg.UnchokedPeers = int(math.Sqrt(float64(ul)))
-    }
+	if cfg.SpeedLimitUpload > 0 {
+		cfg.UnchokedPeers = int(math.Sqrt(float64(ul)))
+	}
 	var ih torrent.InfoHash
 	if isURI(arg) {
 		magnet, err := magnet.New(arg)
