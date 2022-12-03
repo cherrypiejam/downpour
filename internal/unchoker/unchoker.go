@@ -70,7 +70,7 @@ func New(numUnchoked, numOptimisticUnchoked, speedLimitUpload int) *Unchoker {
 		peersUnchoked:           make(map[Peer]struct{}, numUnchoked),
 		peersUnchokedOptimistic: make(map[Peer]struct{}, numUnchoked),
 		Capacity:                capacity,
-		UnchokeRoundsThres:      3,
+		UnchokeRoundsThres:      2,
 		Delta:                   0.2,
 		Gamma:                   0.1,
 	}
@@ -118,7 +118,7 @@ func (u *Unchoker) sortPeersByRatio(peers []Peer) {
 // BitTyrant's periodic 'unchoke'
 func (u *Unchoker) TickTyrantUnchoke(allPeers []Peer) {
 
-	fmt.Println("------------- In Tyrant Unchoke() -------------")
+	// fmt.Println("------------- In Tyrant Unchoke() -------------")
 	peers := u.candidatesUnchoke(allPeers)
 
 	// Adjust
@@ -143,10 +143,13 @@ func (u *Unchoker) TickTyrantUnchoke(allPeers []Peer) {
 
 	// Capacity is the total upload limit (int, KB)
 	for i = 0; i < len(peers) && budget < u.Capacity; i++ {
+		fmt.Printf("unchoked peer %d, budget needed %d, cap %d\n", i, peers[i].UploadContribution(), u.Capacity)
 		if budget + peers[i].UploadContribution() > u.Capacity{
 			// // FIXME not working?
 			// fmt.Printf(">>>>>>>>>> %d\n", u.Capacity - budget)
-			peers[i].SetUploadLimit(u.Capacity - budget) // take a shot
+			uc := u.Capacity - budget
+			peers[i].SetUploadLimit(uc) // take a shot
+			budget += uc
 			i += 1
 			break
 		}
@@ -156,6 +159,7 @@ func (u *Unchoker) TickTyrantUnchoke(allPeers []Peer) {
 		peers[i].SetUploadLimit(peers[i].UploadContribution())
 		u.unchokePeer(peers[i])
 	}
+
 
 	peers = peers[i:]
 	for _, pe := range peers {
