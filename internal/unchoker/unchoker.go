@@ -1,7 +1,7 @@
 package unchoker
 
 import (
-	"fmt"
+    "fmt"
 	"math"
 	"math/rand"
 	"sort"
@@ -70,7 +70,7 @@ func New(numUnchoked, numOptimisticUnchoked, speedLimitUpload int) *Unchoker {
 		peersUnchoked:           make(map[Peer]struct{}, numUnchoked),
 		peersUnchokedOptimistic: make(map[Peer]struct{}, numUnchoked),
 		Capacity:                capacity,
-		UnchokeRoundsThres:      2,
+		UnchokeRoundsThres:      3,
 		Delta:                   0.2,
 		Gamma:                   0.1,
 	}
@@ -109,8 +109,8 @@ func (u *Unchoker) sortPeersByRatio(peers []Peer) {
 		if peers[i].UploadContribution() == 0 {
 			return true
 		}
-		return peers[i].DownloadReciprocation() / peers[i].UploadContribution() >
-			   peers[j].DownloadReciprocation() / peers[j].UploadContribution()
+		return float32(peers[i].DownloadReciprocation()) / float32(peers[i].UploadContribution()) >
+			   float32(peers[j].DownloadReciprocation()) / float32(peers[j].UploadContribution())
 	}
 	sort.Slice(peers, byRatio)
 }
@@ -143,7 +143,8 @@ func (u *Unchoker) TickTyrantUnchoke(allPeers []Peer) {
 
 	// Capacity is the total upload limit (int, KB)
 	for i = 0; i < len(peers) && budget < u.Capacity; i++ {
-		fmt.Printf("unchoked peer %d, budget needed %d, cap %d\n", i, peers[i].UploadContribution(), u.Capacity)
+        fmt.Printf("unchoked peer %d, budget needed %d, reciprocation %d, cap %d\n",
+            i, peers[i].UploadContribution(), peers[i].DownloadReciprocation(), u.Capacity)
 		if budget + peers[i].UploadContribution() > u.Capacity{
 			// // FIXME not working?
 			// fmt.Printf(">>>>>>>>>> %d\n", u.Capacity - budget)

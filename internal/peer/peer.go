@@ -232,14 +232,14 @@ func (p *Peer) SetUnchokedRounds(r int) {
 }
 
 func (p *Peer) DownloadReciprocation() int {
-	if ds := p.DownloadSpeed(); ds > 0 {
+	if ds := p.DownloadSpeed()/1024; ds > 0 {
 		return ds
 	}
 	return p.estimatedReciprocation
 }
 
 func (p *Peer) SetEstimatedReciprocation() {
-	p.estimatedReciprocation = int(p.EstimatedReciprocation.Rate1())
+	p.estimatedReciprocation = int(p.EstimatedReciprocation.Rate1())/1024
 }
 
 func (p *Peer) UploadContribution() int {
