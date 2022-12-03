@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"net/http"
 
 	// nolint: gosec
@@ -17,14 +18,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/boltdb/bolt"
-	"github.com/cenkalti/boltbrowser/boltbrowser"
 	"downpour/internal/console"
 	"downpour/internal/logger"
 	"downpour/internal/magnet"
 	"downpour/internal/metainfo"
 	"downpour/rainrpc"
 	"downpour/torrent"
+
+	"github.com/boltdb/bolt"
+	"github.com/cenkalti/boltbrowser/boltbrowser"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli"
@@ -825,6 +827,9 @@ func handleDd(c *cli.Context) error {
 	cfg.DataDirIncludesTorrentID = false
 	cfg.SpeedLimitDownload = dl
 	cfg.SpeedLimitUpload = ul
+    if cfg.SpeedLimitUpload > 0 {
+        cfg.UnchokedPeers = int(math.Sqrt(float64(ul)))
+    }
 	var ih torrent.InfoHash
 	if isURI(arg) {
 		magnet, err := magnet.New(arg)
