@@ -137,14 +137,22 @@ func (u *Unchoker) TickTyrantUnchoke(allPeers []Peer) {
 
 	u.sortPeersByRatio(peers)
 
+	fmt.Printf("printing\n")
+	for j := 0; j < len(peers) ; j++ {
+		fmt.Printf("%d, reciprocation %d, budget needed %d\n", j,
+		peers[j].DownloadReciprocation(), peers[j].UploadContribution())
+	}
+	fmt.Printf("printing End\n")
+
+
 	// bugdet of upload speed
 	var budget int = 0
 	var i int
 
 	// Capacity is the total upload limit (int, KB)
 	for i = 0; i < len(peers) && budget < u.Capacity; i++ {
-        fmt.Printf("unchoked peer %d, budget needed %d, reciprocation %d, cap %d\n",
-            i, peers[i].UploadContribution(), peers[i].DownloadReciprocation(), u.Capacity)
+		fmt.Printf("unchoked peer %d, budget needed %d, reciprocation %d, cap %d\n",
+			i, peers[i].UploadContribution(), peers[i].DownloadReciprocation(), u.Capacity)
 		if budget + peers[i].UploadContribution() > u.Capacity{
 			// // FIXME not working?
 			// fmt.Printf(">>>>>>>>>> %d\n", u.Capacity - budget)

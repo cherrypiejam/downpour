@@ -19,8 +19,9 @@ import (
 	"downpour/internal/piece"
 	"downpour/internal/sliceset"
 	"downpour/internal/stringutil"
+	"downpour/internal/util"
+
 	"golang.org/x/time/rate"
-	"github.com/rcrowley/go-metrics"
 )
 
 // Peer of a Torrent. Wraps a BitTorrent connection.
@@ -59,13 +60,13 @@ type Peer struct {
 	// reciprocalUploadSpeed int
 	// estimatedDownloadSpeed int
 
-	EstimatedReciprocation metrics.Meter
+	EstimatedReciprocation util.Meter
 
 	// Calculate # rounds being unchoked
 	unchokedRounds int
 
-	downloadSpeed metrics.Meter
-	uploadSpeed   metrics.Meter
+	downloadSpeed util.Meter
+	uploadSpeed   util.Meter
 
 	// Messages received while we don't have info yet are saved here.
 	Messages []interface{}
@@ -123,9 +124,9 @@ func New(conn net.Conn, source peersource.Source, id [20]byte, extensions [8]byt
 		doneC:             make(chan struct{}),
 		estimatedReciprocation: 20, // TODO adjust estimated init rate
 		estimatedContribution:  20, // constant values for now
-		downloadSpeed:     metrics.NewMeter(),
-		uploadSpeed:       metrics.NewMeter(),
-		EstimatedReciprocation: metrics.NewMeter(),
+		downloadSpeed:     util.NewMeter(),
+		uploadSpeed:       util.NewMeter(),
+		EstimatedReciprocation: util.NewMeter(),
 	}
 }
 
