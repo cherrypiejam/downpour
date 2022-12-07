@@ -28,7 +28,10 @@ func (t *torrent) handleAllocationDone(al *allocator.Allocator) {
 	if t.pieces != nil {
 		panic("pieces exists")
 	}
-	pieces := piece.NewPieces(t.info, t.files)
+
+	// TODO for range min <= i < max, specifiing range
+	// parameter needed: #, which part
+	pieces := piece.NewPieces(t.info, t.files, t.Sybil)
 	if len(pieces) == 0 {
 		t.stop(fmt.Errorf("torrent has zero pieces"))
 		return
@@ -42,7 +45,7 @@ func (t *torrent) handleAllocationDone(al *allocator.Allocator) {
 	if t.piecePicker != nil {
 		panic("piece picker exists")
 	}
-	t.piecePicker = piecepicker.New(t.pieces, t.session.config.EndgameMaxDuplicateDownloads, t.webseedSources)
+	t.piecePicker = piecepicker.New2(t.pieces, t.session.config.EndgameMaxDuplicateDownloads, t.webseedSources, t.Sybil)
 
 	for pe := range t.peers {
 		pe.Bitfield = bitfield.New(t.info.NumPieces)

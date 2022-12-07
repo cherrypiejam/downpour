@@ -9,6 +9,7 @@ import (
 	"downpour/internal/sliceset"
 	"downpour/internal/piece"
 	"downpour/internal/webseedsource"
+	"downpour/internal/sybil"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -97,6 +98,27 @@ func New(pieces []piece.Piece, maxDuplicateDownload int, webseedSources []*webse
 	}
 }
 
+// New returns a new PiecePicker for Sybil attack.
+func New2(pieces []piece.Piece, maxDuplicateDownload int, webseedSources []*webseedsource.WebseedSource, sybil *sybil.SybilInfo) *PiecePicker {
+	ps := make([]myPiece, len(pieces))
+	for i := range pieces {
+		ps[i] = myPiece{Piece: &pieces[i]}
+	}
+	sps  := make([]*myPiece, sybil.PieceEnd - sybil.PieceBegin)
+	sps2 := make([]*myPiece, sybil.PieceEnd - sybil.PieceBegin)
+	for i := range sps {
+		sps[i]  = &ps[sybil.ToActualIndex(uint32(i))]
+		sps2[i] = &ps[sybil.ToActualIndex(uint32(i))]
+	}
+	return &PiecePicker{
+		pieces:               ps,
+		piecesByAvailability: sps,
+		piecesByStalled:      sps2,
+		maxDuplicateDownload: maxDuplicateDownload,
+		webseedSources:       webseedSources,
+	}
+}
+
 // CloseWebseedDownloader closes the download from a webseed source.
 func (p *PiecePicker) CloseWebseedDownloader(src *webseedsource.WebseedSource) {
 	src.DownloadSpeed.Stop()
@@ -152,6 +174,12 @@ func (p *PiecePicker) HandleHave(pe *peer.Peer, i uint32) {
 	pe.Bitfield.Set(i)
 	p.addHavingPeer(i, pe)
 }
+
+// // HandleHave must be called to set the availability of the piece at the peer.
+// func (p *PiecePicker) HandleHaveSybil(pe *peer.Peer, i uint32, s *sybil.SybilInfo) {
+	// pe.Bitfield.Set(i)
+	// p.addHavingPeer(s.ToPieceIndex(i), pe)
+// }
 
 // HandleAllowedFast must be called to set the allowed-fast status of the piece at peer.
 func (p *PiecePicker) HandleAllowedFast(pe *peer.Peer, i uint32) {
@@ -310,6 +338,43 @@ func (p *PiecePicker) pickRarest(pe *peer.Peer) *myPiece {
 	}
 	return picked
 }
+
+// func (p *PiecePicker) pickRarestSybil(pe *peer.Peer) *myPiece {
+	// // Sort by rarity
+	// sort.Slice(p.piecesByAvailability, func(i, j int) bool {
+		// return len(p.piecesByAvailability[i].Having.Items) < len(p.piecesByAvailability[j].Having.Items)
+	// })
+	// var picked *myPiece
+	// var hasUnrequested bool
+	// if len(p.piecesByAvailability) > 0 {
+		// // Randomly select unrequested piece
+		// // FIXME use fixed size slices to avoid multiple allocations
+		// // because a tie can have 1000+ pieces initially
+		// tie := []*myPiece{}
+		// for _, mp := range p.piecesByAvailability {
+			// if len(p.piecesByAvailability[0].Having.Items) != len(mp.Having.Items) {
+				// break
+			// }
+			// if mp.Done || mp.Writing {
+				// continue
+			// }
+			// if mp.Requested.Len() == 0 {
+				// if mp.Having.Has(pe) {
+					// tie = append(tie, mp)
+				// }
+				// hasUnrequested = true
+			// }
+		// }
+		// if len(tie) > 0 {
+			// brk := rand.Intn(len(tie)) // nolint: gosec
+			// picked = tie[brk]
+		// }
+	// }
+	// if picked == nil && !hasUnrequested {
+		// p.endgame = true
+	// }
+	// return picked
+// }
 
 func (p *PiecePicker) pickEndgame(pe *peer.Peer) *myPiece {
 	// Sort by request count

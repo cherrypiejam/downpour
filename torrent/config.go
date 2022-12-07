@@ -193,6 +193,10 @@ type Config struct {
 
 	// Shell command to execute on torrent completion.
 	OnCompleteCmd []string
+
+	// Sybil attack
+	Identity    int
+	NumIdentity int
 }
 
 // DefaultConfig for Session. Do not pass zero value Config to NewSession. Copy this struct and modify instead.

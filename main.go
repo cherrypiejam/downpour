@@ -144,6 +144,14 @@ func main() {
 					Name:  "uploadlimit,ul",
 					Usage: "upload limit speed",
 				},
+				cli.IntFlag{
+					Name:  "identity,id",
+					Usage: "identity",
+				},
+				cli.IntFlag{
+					Name:  "numidentity,n",
+					Usage: "number of identity",
+				},
 			},
 			Action: handleDd,
 		},
@@ -812,13 +820,15 @@ func handleDownload(c *cli.Context) error {
 }
 
 func handleDd(c *cli.Context) error {
-	arg := c.String("torrent")
-	seed := c.Bool("seed")
-	resume := c.String("resume")
-	postfix := c.String("postfix")
-	outdir := c.String("outdir")
-	dl := c.Int("downloadlimit")
-	ul := c.Int("uploadlimit")
+	arg         := c.String("torrent")
+	seed        := c.Bool("seed")
+	resume      := c.String("resume")
+	postfix     := c.String("postfix")
+	outdir      := c.String("outdir")
+	dl          := c.Int("downloadlimit")
+	ul          := c.Int("uploadlimit")
+	identity    := c.Int("identity")
+	numIdentity := c.Int("numidentity")
 	cfg, err := prepareConfig(c)
 	if err != nil {
 		return err
@@ -829,6 +839,10 @@ func handleDd(c *cli.Context) error {
 	cfg.SpeedLimitUpload = ul
 	if cfg.SpeedLimitUpload > 0 {
 		cfg.UnchokedPeers = int(math.Sqrt(float64(ul)))
+	}
+	if numIdentity > 0 {
+		cfg.Identity = identity
+		cfg.NumIdentity = numIdentity
 	}
 	var ih torrent.InfoHash
 	if isURI(arg) {
@@ -882,7 +896,7 @@ func handleDd(c *cli.Context) error {
 			if err != nil {
 				return err
 			}
-			t, err = ses.AddTorrent(f, opt)
+			t, err = ses.AddTorrentSybil(f, opt, identity, numIdentity)
 			f.Close()
 		}
 	}
@@ -891,7 +905,8 @@ func handleDd(c *cli.Context) error {
 	}
 
 	// Output log
-	f, err := os.Create(cfg.DataDir + "stats.log")
+	log_path := fmt.Sprintf("stats.%d.log", identity)
+	f, err := os.Create(cfg.DataDir + log_path)
 	if err != nil {
 		return err
 	}

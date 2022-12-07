@@ -18,9 +18,16 @@ func (t *torrent) checkCompletion() bool {
 	if t.completed {
 		return true
 	}
-	if !t.bitfield.All() {
-		return false
+	for i := uint32(t.Sybil.PieceBegin); i < t.bitfield.Len(); i++ {
+		if i >= uint32(t.Sybil.PieceEnd) {
+			break
+		} else if !t.bitfield.Test(i) {
+			return false
+		}
 	}
+	// if !t.bitfield.All() {
+		// return false
+	// }
 	t.completed = true
 	close(t.completeC)
 	for h := range t.outgoingHandshakers {

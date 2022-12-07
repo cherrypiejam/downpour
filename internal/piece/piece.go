@@ -7,6 +7,8 @@ import (
 	"downpour/internal/allocator"
 	"downpour/internal/filesection"
 	"downpour/internal/metainfo"
+	"downpour/internal/sybil"
+
 	"golang.org/x/exp/constraints"
 )
 
@@ -30,7 +32,7 @@ type Block struct {
 }
 
 // NewPieces returns a slice of Pieces by mapping files to the pieces.
-func NewPieces(info *metainfo.Info, files []allocator.File) []Piece {
+func NewPieces(info *metainfo.Info, files []allocator.File, sybil *sybil.SybilInfo) []Piece {
 	var (
 		fileIndex  int   // index of the current file in torrent
 		fileLength int64 // length of the file in fileIndex
@@ -51,10 +53,38 @@ func NewPieces(info *metainfo.Info, files []allocator.File) []Piece {
 
 	fileLeft := func() int64 { return fileLength - fileOffset }
 
+
+	// hmmm
+	// k := int64(math.Ceil(float64(info.NumPieces)/float64(numIdentity)))
+	// piece_begin := k * identity // per piece
+	// piece_end   := k * (identity + 1)
+	// if piece_end > info.NumPieces {
+		// piece_end = info.NumPieces
+	// }
+	// offset_begin := info.PieceLength * piece_begin
+	// offset_end   := info.PieceLength * piece_end
+	// var length int64
+	// if offset_end > info.Files[0].Length {
+		// length = info.Files[0].Length - offset_begin
+	// } else {
+		// length = offset_end - offset_end
+	// }
+
+	// Suppose we only download one file
+
+	// if sybil == nil {
+		// fmt.Printf("sybil is nil !!\n")
+	// }
+
+	fileOffset = sybil.OffsetBegin
+
 	// Construct pieces
 	var total int64
 	pieces := make([]Piece, info.NumPieces)
-	for i := uint32(0); i < info.NumPieces; i++ {
+	pieceBegin := uint32(sybil.PieceBegin)
+	pieceEnd := uint32(sybil.PieceEnd)
+	// for i := uint32(0); i < info.NumPieces; i++ {
+	for i := pieceBegin; i < pieceEnd; i++ {
 		p := Piece{
 			Index: i,
 			Hash:  info.PieceHash(i),
@@ -83,11 +113,15 @@ func NewPieces(info *metainfo.Info, files []allocator.File) []Piece {
 			fileOffset += int64(n)
 			total += int64(n)
 
-			if total == info.Length {
+			// if total == info.Length {
+			// fmt.Printf("total: %d, sybil.Length: %d, info.Length %d\n",
+		// total, sybil.Length, info.Length)
+			if total == sybil.Length {
 				break
 			}
 			if fileLeft() == 0 {
 				nextFile()
+				panic("Should not have the next file")
 			}
 		}
 

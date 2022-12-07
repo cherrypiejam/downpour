@@ -126,10 +126,25 @@ func (t *torrent) handlePeerMessage(pm peer.Message) {
 			t.closePeer(pe)
 			break
 		}
-		// pe.Logger().Debug("Peer ", pe.String(), " has piece #", pi.Index)
+
+		if msg.Index < uint32(t.Sybil.PieceBegin) ||
+			msg.Index >= uint32(t.Sybil.PieceEnd) {
+			break
+		}
+
+		// stored in t.
+		index := t.Sybil.ToPieceIndex(msg.Index)
+		if index >= uint32(t.Sybil.PieceEnd) {
+			break
+		}
 		if t.piecePicker != nil {
 			t.piecePicker.HandleHave(pe, msg.Index)
 		}
+
+		// pe.Logger().Debug("Peer ", pe.String(), " has piece #", pi.Index)
+		// if t.piecePicker != nil {
+			// t.piecePicker.HandleHave(pe, msg.Index)
+		// }
 		t.updateInterestedState(pe)
 		t.startPieceDownloaderFor(pe)
 	case peerprotocol.BitfieldMessage:
@@ -150,11 +165,19 @@ func (t *torrent) handlePeerMessage(pm peer.Message) {
 		}
 		pe.Logger().Debugln("Received bitfield:", bf.Hex())
 		if t.piecePicker != nil {
-			for i := uint32(0); i < bf.Len(); i++ {
-				if bf.Test(i) {
+			for i := uint32(t.Sybil.PieceBegin); i < bf.Len(); i++ {
+				if i >= uint32(t.Sybil.PieceEnd) {
+					break
+				} else if bf.Test(i) {
 					t.piecePicker.HandleHave(pe, i)
 				}
 			}
+
+			// for i := uint32(0); i < bf.Len(); i++ {
+				// if bf.Test(i) {
+					// t.piecePicker.HandleHave(pe, i)
+				// }
+			// }
 		}
 		t.updateInterestedState(pe)
 		t.startPieceDownloaderFor(pe)
@@ -182,9 +205,10 @@ func (t *torrent) handlePeerMessage(pm peer.Message) {
 			break
 		}
 		pe.Logger().Debug("Peer ", pe.String(), " has allowed fast for piece #", msg.Index)
-		if t.piecePicker != nil {
-			t.piecePicker.HandleAllowedFast(pe, msg.Index)
-		}
+		// CHANGE: dont allow fast
+		// if t.piecePicker != nil {
+			// t.piecePicker.HandleAllowedFast(pe, msg.Index)
+		// }
 	case peerprotocol.UnchokeMessage:
 		pe.PeerChoking = false
 		pd, ok := t.pieceDownloaders[pe]
@@ -360,7 +384,14 @@ func (t *torrent) updateInterestedState(pe *peer.Peer) {
 	}
 	interested := false
 	if !t.completed {
-		for i := uint32(0); i < t.bitfield.Len(); i++ {
+		for i := uint32(t.Sybil.PieceBegin); i < t.bitfield.Len(); i++ {
+			// TODO skip don't cares
+			// if i < uint32(t.Sybil.PieceBegin) {
+				// continue
+			// }
+			if i >= uint32(t.Sybil.PieceEnd) {
+				break
+			}
 			weHave := t.bitfield.Test(i)
 			peerHave := pe.Bitfield.Test(i)
 			if !weHave && peerHave {

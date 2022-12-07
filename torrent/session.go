@@ -219,7 +219,7 @@ func NewSession(cfg Config) (*Session, error) {
 		c.dhtPeerRequests = make(map[*torrent]struct{})
 	}
 	c.initMetrics()
-	c.loadExistingTorrents(ids)
+	c.loadExistingTorrents(ids, cfg.Identity, cfg.NumIdentity)
 	if c.config.RPCEnabled {
 		c.rpc = newRPCServer(c)
 		err = c.rpc.Start(c.config.RPCHost, c.config.RPCPort)

@@ -16,6 +16,7 @@ import (
 
 	"downpour/internal/resumer/boltdbresumer"
 	"downpour/internal/rpctypes"
+
 	"github.com/powerman/rpc-codec/jsonrpc2"
 )
 

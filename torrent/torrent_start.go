@@ -72,7 +72,7 @@ func (t *torrent) startAllocator() {
 		panic("allocator exists")
 	}
 	t.allocator = allocator.New()
-	go t.allocator.Run(t.info, t.storage, t.allocatorProgressC, t.allocatorResultC)
+	go t.allocator.Run(t.info, t.storage, t.allocatorProgressC, t.allocatorResultC, t.Sybil)
 }
 
 func (t *torrent) addFixedPeers() {

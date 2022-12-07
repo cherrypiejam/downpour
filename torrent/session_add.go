@@ -49,6 +49,20 @@ func (s *Session) AddTorrent(r io.Reader, opt *AddTorrentOptions) (*Torrent, err
 	return t, err
 }
 
+func (s *Session) AddTorrentSybil(r io.Reader, opt *AddTorrentOptions, identity, numIdentity int) (*Torrent, error) {
+	if opt == nil {
+		opt = &AddTorrentOptions{}
+	}
+	t, err := s.addTorrentStoppedSybil(r, opt, identity, numIdentity)
+	if err != nil {
+		return nil, err
+	}
+	if !opt.Stopped {
+		err = t.Start()
+	}
+	return t, err
+}
+
 func (s *Session) parseMetaInfo(r io.Reader) (*metainfo.MetaInfo, error) {
 	mi, err := metainfo.New(r)
 	if err != nil {
@@ -58,6 +72,69 @@ func (s *Session) parseMetaInfo(r io.Reader) (*metainfo.MetaInfo, error) {
 		return nil, errTooManyPieces
 	}
 	return mi, nil
+}
+
+
+func (s *Session) addTorrentStoppedSybil(r io.Reader, opt *AddTorrentOptions, identity, numIdentity int) (*Torrent, error) {
+	r = io.LimitReader(r, int64(s.config.MaxTorrentSize))
+	mi, err := s.parseMetaInfo(r)
+	if err != nil {
+		return nil, newInputError(err)
+	}
+	id, port, sto, err := s.add(opt)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err != nil {
+			s.releasePort(port)
+		}
+	}()
+	t, err := newTorrent3(
+		s,
+		id,
+		time.Now(),
+		mi.Info.Hash[:],
+		sto,
+		mi.Info.Name,
+		port,
+		s.parseTrackers(mi.AnnounceList, mi.Info.Private),
+		nil, // fixedPeers
+		&mi.Info,
+		nil, // bitfield
+		resumer.Stats{},
+		webseedsource.NewList(mi.URLList),
+		opt.StopAfterDownload,
+		opt.StopAfterMetadata,
+		false, // completeCmdRun
+		identity, numIdentity,
+	)
+	if err != nil {
+		return nil, err
+	}
+	go s.checkTorrent(t)
+	defer func() {
+		if err != nil {
+			t.Close()
+		}
+	}()
+	rspec := &boltdbresumer.Spec{
+		InfoHash:          mi.Info.Hash[:],
+		Port:              port,
+		Name:              mi.Info.Name,
+		Trackers:          mi.AnnounceList,
+		URLList:           mi.URLList,
+		Info:              mi.Info.Bytes,
+		AddedAt:           t.addedAt,
+		StopAfterDownload: opt.StopAfterDownload,
+		StopAfterMetadata: opt.StopAfterMetadata,
+	}
+	err = s.resumer.Write(id, rspec)
+	if err != nil {
+		return nil, err
+	}
+	t2 := s.insertTorrent(t)
+	return t2, nil
 }
 
 func (s *Session) addTorrentStopped(r io.Reader, opt *AddTorrentOptions) (*Torrent, error) {

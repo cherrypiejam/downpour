@@ -36,6 +36,7 @@ import (
 	"downpour/internal/unchoker"
 	"downpour/internal/verifier"
 	"downpour/internal/webseedsource"
+	"downpour/internal/sybil"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -261,7 +262,147 @@ type torrent struct {
 	// True means that completeCmd has run before.
 	completeCmdRun bool
 
+	// For Sybil attack
+	// identity     int
+	// numIdentity  int
+	// piece_start  int
+	// piece_end    int
+	// offset_start int
+	// offset_end   int
+	Sybil *sybil.SybilInfo
+
 	log logger.Logger
+}
+
+
+// newTorrent3 is a constructor for torrent struct for Sybil attack.
+// loadExistingTorrents ultimately calls this method.
+func newTorrent3(
+	s *Session,
+	id string,
+	addedAt time.Time,
+	infoHash []byte,
+	sto storage.Storage,
+	name string, // display name
+	port int, // tcp peer port
+	trackers []tracker.Tracker,
+	fixedPeers []string,
+	info *metainfo.Info,
+	bf *bitfield.Bitfield,
+	stats resumer.Stats, // initial stats from previous run
+	ws []*webseedsource.WebseedSource,
+	stopAfterDownload bool,
+	stopAfterMetadata bool,
+	completeCmdRun bool,
+	identity, numIdentity int,
+) (*torrent, error) {
+	if len(infoHash) != 20 {
+		return nil, errors.New("invalid infoHash (must be 20 bytes)")
+	}
+	cfg := s.config
+	var ih [20]byte
+	copy(ih[:], infoHash)
+	t := &torrent{
+		session:                   s,
+		id:                        id,
+		addedAt:                   addedAt,
+		infoHash:                  ih,
+		trackers:                  trackers,
+		fixedPeers:                fixedPeers,
+		name:                      name,
+		storage:                   sto,
+		port:                      port,
+		info:                      info,
+		bitfield:                  bf,
+		log:                       logger.New("torrent " + id),
+		peerDisconnectedC:         make(chan *peer.Peer),
+		messages:                  make(chan peer.Message),
+		pieceMessagesC:            suspendchan.New[peer.PieceMessage](0),
+		peers:                     make(map[*peer.Peer]struct{}),
+		incomingPeers:             make(map[*peer.Peer]struct{}),
+		outgoingPeers:             make(map[*peer.Peer]struct{}),
+		pieceDownloaders:          make(map[*peer.Peer]*piecedownloader.PieceDownloader),
+		pieceDownloadersSnubbed:   make(map[*peer.Peer]*piecedownloader.PieceDownloader),
+		pieceDownloadersChoked:    make(map[*peer.Peer]*piecedownloader.PieceDownloader),
+		peerSnubbedC:              make(chan *peer.Peer),
+		infoDownloaders:           make(map[*peer.Peer]*infodownloader.InfoDownloader),
+		infoDownloadersSnubbed:    make(map[*peer.Peer]*infodownloader.InfoDownloader),
+		pieceWriterResultC:        make(chan *piecewriter.PieceWriter),
+		completeC:                 make(chan struct{}),
+		completeMetadataC:         make(chan struct{}),
+		closeC:                    make(chan chan struct{}),
+		startCommandC:             make(chan struct{}),
+		stopCommandC:              make(chan struct{}),
+		announceCommandC:          make(chan struct{}),
+		verifyCommandC:            make(chan struct{}),
+		statsCommandC:             make(chan statsRequest),
+		trackersCommandC:          make(chan trackersRequest),
+		peersCommandC:             make(chan peersRequest),
+		webseedsCommandC:          make(chan webseedsRequest),
+		notifyErrorCommandC:       make(chan notifyErrorCommand),
+		notifyListenCommandC:      make(chan notifyListenCommand),
+		addPeersCommandC:          make(chan []*net.TCPAddr),
+		addTrackersCommandC:       make(chan []tracker.Tracker),
+		addrsFromTrackers:         make(chan []*net.TCPAddr),
+		peerIDs:                   make(map[[20]byte]struct{}),
+		incomingConnC:             make(chan net.Conn),
+		sKeyHash:                  mse.HashSKey(ih[:]),
+		infoDownloaderResultC:     make(chan *infodownloader.InfoDownloader),
+		incomingHandshakers:       make(map[*incominghandshaker.IncomingHandshaker]struct{}),
+		outgoingHandshakers:       make(map[*outgoinghandshaker.OutgoingHandshaker]struct{}),
+		incomingHandshakerResultC: make(chan *incominghandshaker.IncomingHandshaker),
+		outgoingHandshakerResultC: make(chan *outgoinghandshaker.OutgoingHandshaker),
+		allocatorProgressC:        make(chan allocator.Progress),
+		allocatorResultC:          make(chan *allocator.Allocator),
+		verifierProgressC:         make(chan verifier.Progress),
+		verifierResultC:           make(chan *verifier.Verifier),
+		connectedPeerIPs:          make(map[string]struct{}),
+		bannedPeerIPs:             make(map[string]struct{}),
+		announcersStoppedC:        make(chan struct{}),
+		dhtPeersC:                 make(chan []*net.TCPAddr, 1),
+		externalIP:                externalip.FirstExternalIP(),
+		downloadSpeed:             metrics.NilMeter{},
+		uploadSpeed:               metrics.NilMeter{},
+		bytesDownloaded:           metrics.NewCounter(),
+		bytesUploaded:             metrics.NewCounter(),
+		bytesWasted:               metrics.NewCounter(),
+		seededFor:                 metrics.NewCounter(),
+		ramNotifyC:                make(chan *peer.Peer),
+		webseedClient:             &s.webseedClient,
+		webseedSources:            ws,
+		webseedPieceResultC:       suspendchan.New[*urldownloader.PieceResult](0),
+		webseedRetryC:             make(chan *webseedsource.WebseedSource),
+		doneC:                     make(chan struct{}),
+		stopAfterDownload:         stopAfterDownload,
+		stopAfterMetadata:         stopAfterMetadata,
+		completeCmdRun:            completeCmdRun,
+	}
+
+	t.Sybil = sybil.New(identity, numIdentity, info)
+
+	if len(t.webseedSources) > s.config.WebseedMaxSources {
+		t.webseedSources = t.webseedSources[:10]
+	}
+	t.bytesDownloaded.Inc(stats.BytesDownloaded)
+	t.bytesUploaded.Inc(stats.BytesUploaded)
+	t.bytesWasted.Inc(stats.BytesWasted)
+	t.seededFor.Inc(stats.SeededFor)
+	var blocklistForOutgoingConns *blocklist.Blocklist
+	if cfg.BlocklistEnabledForOutgoingConnections {
+		blocklistForOutgoingConns = s.blocklist
+	}
+	t.addrList = addrlist.New(cfg.MaxPeerAddresses, blocklistForOutgoingConns, port, &t.externalIP)
+	if t.info != nil {
+		t.piecePool = bufferpool.New(int(t.info.PieceLength))
+	}
+	n := t.copyPeerIDPrefix()
+	_, err := rand.Read(t.peerID[n:])
+	if err != nil {
+		return nil, err
+	}
+	t.unchoker = unchoker.New(cfg.UnchokedPeers, cfg.OptimisticUnchokedPeers)
+	go t.run()
+	return t, nil
 }
 
 // newTorrent2 is a constructor for torrent struct.
