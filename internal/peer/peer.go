@@ -122,7 +122,7 @@ func New(conn net.Conn, source peersource.Source, id [20]byte, extensions [8]byt
 		snubTimer:         t,
 		closeC:            make(chan struct{}),
 		doneC:             make(chan struct{}),
-		estimatedReciprocation: 20, // TODO adjust estimated init rate
+		estimatedReciprocation: 20, // TODO adjust estimated init rate, exp/3
 		estimatedContribution:  20, // constant values for now
 		downloadSpeed:     util.NewMeter(),
 		uploadSpeed:       util.NewMeter(),
