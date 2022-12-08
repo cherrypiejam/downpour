@@ -1,6 +1,7 @@
 package piece
 
 import (
+	"fmt"
 	"bytes"
 	"hash"
 
@@ -51,7 +52,6 @@ func NewPieces(info *metainfo.Info, files []allocator.File, sybil *sybil.SybilIn
 	fileIndex = -1
 	nextFile()
 
-	fileLeft := func() int64 { return fileLength - fileOffset }
 
 
 	// hmmm
@@ -76,7 +76,9 @@ func NewPieces(info *metainfo.Info, files []allocator.File, sybil *sybil.SybilIn
 		// fmt.Printf("sybil is nil !!\n")
 	// }
 
-	fileOffset = sybil.OffsetBegin
+	fileOffset = 0
+	fileLength = sybil.Length
+	fileLeft := func() int64 { return fileLength - fileOffset }
 
 	// Construct pieces
 	var total int64
@@ -114,8 +116,10 @@ func NewPieces(info *metainfo.Info, files []allocator.File, sybil *sybil.SybilIn
 			total += int64(n)
 
 			// if total == info.Length {
-			// fmt.Printf("total: %d, sybil.Length: %d, info.Length %d\n",
-		// total, sybil.Length, info.Length)
+			fmt.Printf("total: %d, sybil.Length: %d, info.Length %d\n",
+		total, sybil.Length, info.Length)
+			fmt.Printf("piece start %d, piece end %d, info numpiece %d\n",
+		sybil.PieceBegin, sybil.PieceEnd, info.NumPieces)
 			if total == sybil.Length {
 				break
 			}

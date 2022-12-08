@@ -69,9 +69,6 @@ func (a *Allocator) Run(
 		}
 	}()
 
-	// TODO pass in t.identity int
-	// TODO pass in t.numIdentity int
-
 	var allocatedSize int64
 	a.Files = make([]File, len(info.Files))
 	for i, f := range info.Files {
@@ -98,7 +95,7 @@ func (a *Allocator) Run(
 			// }
 
 			path := fmt.Sprintf("%s.%d", f.Path, sybil.Identity)
-			fmt.Printf("created file length: %d", sybil.Length)
+			fmt.Printf("open file length: %dK\n", sybil.Length/1024)
 			sf, exists, a.Error = sto.Open(path, sybil.Length)
 
 			// sf, exists, a.Error = sto.Open(f.Path, f.Length)
@@ -114,7 +111,8 @@ func (a *Allocator) Run(
 		}
 		// a.Files[i] = File{Storage: sf, Name: f.Path, Padding: f.Padding}
 		// a.Files[i] = File{Storage: sf, Name: path, Padding: f.Padding}
-		allocatedSize += f.Length
+		// allocatedSize += f.Length
+		allocatedSize += sybil.Length
 		a.sendProgress(progressC, allocatedSize)
 	}
 }
