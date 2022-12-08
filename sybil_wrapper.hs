@@ -14,7 +14,7 @@ main :: IO ()
 main = do
     args <- getArgs
     case args of
-        [dpath,torrent,conf,out,upload,numids] -> do
+        [dpath,torrent,conf,outdir,outname,upload,numids] -> do
             case readMaybe numids :: Maybe Integer of
                 Just n -> do
                     -- Mount Sybil
@@ -26,7 +26,7 @@ main = do
                                 , "--config"
                                 , conf ++ "/config." ++ show id ++ ".yaml"
                                 , "--outdir"
-                                , out ++ "/" ++ show id
+                                , outdir ++ "/" ++ show id
                                 , "--uploadlimit"
                                 , show upload''
                                 , "--numidentity"
@@ -47,12 +47,16 @@ main = do
                         return h)
                     mapM_ waitForProcess hs
                     -- Collect results
+                    let outfiles = [outdir ++ "/" ++ show id ++ "/" ++
+                                    outname ++ "." ++ show id | id <- ids]
                     (_, Just hout, _, h) <-
-                            createProcess (proc "cat" ["ThatFile" ++ show id | id <- ids]) { std_out = CreatePipe }
-                    forkIO $ hGetContents hout >>= writeFile "ThatFile" -- FIXME add param, need to know the outfile name
+                            createProcess (proc "cat" outfiles) {
+                                std_out = CreatePipe
+                            }
+                    forkIO $ hGetContents hout >>= writeFile outname -- FIXME add param, need to know the outfile name
                     void $ waitForProcess h
                 Nothing -> return ()
         _wrongNumArgs ->
             putStrLn "Usage: \
                      \sybil_wrapper </path/to/downpour> </path/to/torrent> \
-                     \</path/to/conf> </path/to/outdir> <uploadlimit> <numidentities>"
+                     \</path/to/conf> </path/to/outdir> <outname> <uploadlimit> <numidentities>"
