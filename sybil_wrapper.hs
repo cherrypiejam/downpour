@@ -5,6 +5,7 @@ import Control.Monad
 import Control.Exception
 import Control.Concurrent
 import Text.Read
+import Language.Haskell.TH (bang)
 
 forceGetContents :: String -> IO ()
 forceGetContents s = void $ evaluate $ length s
@@ -43,6 +44,12 @@ main = do
                                               let n' = fromInteger n :: Float,
                                               let upload'' = ceiling $ upload' / n',
                                               id <- ids]
+                    -- FIXME Spawning many processes may cause many Sybil
+                    -- identity to connect each other. Although they won't
+                    -- possibly exchange pieces, inner connections hinder
+                    -- them to connect other peers. A workaround is to ban
+                    -- the local IP address (either in downpour or config),
+                    -- which disables the local test.
                     hs <- forM args (\a -> do
                         (_, Just hout, Just herr, h) <-
                             createProcess (proc downpour a) {
