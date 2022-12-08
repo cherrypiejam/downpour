@@ -2,7 +2,6 @@ package piecedownloader
 
 import (
 	"errors"
-	"fmt"
 
 	"downpour/internal/bufferpool"
 	"downpour/internal/piece"
@@ -143,8 +142,6 @@ func (d *PieceDownloader) RequestBlocks(queueLength int) {
 			panic("cannot get block")
 		}
 		if _, ok := d.done[begin]; !ok {
-			// TODO change
-			fmt.Printf("requestpiece %d %d %d", d.Piece.Index, begin, length)
 			d.Peer.RequestPiece(d.Piece.Index, begin, length)
 		}
 		d.remaining = d.remaining[1:]

@@ -78,27 +78,12 @@ func (a *Allocator) Run(
 			sf = storage.NewPaddingFile(f.Length)
 			a.Files[i] = File{Storage: sf, Name: f.Path, Padding: f.Padding}
 		} else {
-			// Don't care padding files for now
+			// FIXME Don't care about padding files for now
 			// https://www.bittorrent.org/beps/bep_0047.html
 
-			// k := int64(math.Ceil(float64(info.NumPieces)/float64(numIdentity)))
-			// begin := info.PieceLength * k * identity
-			// end   := info.PieceLength * k * (identity + 1)
-			// var length int64
-			// if begin >= f.Length {
-				// panic("oops bad identity")
-			// }
-			// if end > f.Length {
-				// length = f.Length - begin
-			// } else {
-				// length = end - begin
-			// }
-
+			// fmt.Printf("open file length: %dK\n", sybil.Length/1024)
 			path := fmt.Sprintf("%s.%d", f.Path, sybil.Identity)
-			fmt.Printf("open file length: %dK\n", sybil.Length/1024)
 			sf, exists, a.Error = sto.Open(path, sybil.Length)
-
-			// sf, exists, a.Error = sto.Open(f.Path, f.Length)
 			if a.Error != nil {
 				return
 			}
@@ -109,8 +94,6 @@ func (a *Allocator) Run(
 			}
 			a.Files[i] = File{Storage: sf, Name: path, Padding: f.Padding}
 		}
-		// a.Files[i] = File{Storage: sf, Name: f.Path, Padding: f.Padding}
-		// a.Files[i] = File{Storage: sf, Name: path, Padding: f.Padding}
 		// allocatedSize += f.Length
 		allocatedSize += sybil.Length
 		a.sendProgress(progressC, allocatedSize)

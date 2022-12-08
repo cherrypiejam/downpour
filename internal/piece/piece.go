@@ -1,7 +1,6 @@
 package piece
 
 import (
-	"fmt"
 	"bytes"
 	"hash"
 
@@ -52,32 +51,11 @@ func NewPieces(info *metainfo.Info, files []allocator.File, sybil *sybil.SybilIn
 	fileIndex = -1
 	nextFile()
 
-
-
-	// hmmm
-	// k := int64(math.Ceil(float64(info.NumPieces)/float64(numIdentity)))
-	// piece_begin := k * identity // per piece
-	// piece_end   := k * (identity + 1)
-	// if piece_end > info.NumPieces {
-		// piece_end = info.NumPieces
-	// }
-	// offset_begin := info.PieceLength * piece_begin
-	// offset_end   := info.PieceLength * piece_end
-	// var length int64
-	// if offset_end > info.Files[0].Length {
-		// length = info.Files[0].Length - offset_begin
-	// } else {
-		// length = offset_end - offset_end
-	// }
-
-	// Suppose we only download one file
-
-	// if sybil == nil {
-		// fmt.Printf("sybil is nil !!\n")
-	// }
-
-	fileOffset = 0
-	fileLength = sybil.Length
+	// FIXME Assume there is only one file in the torrent.
+	// Otherwise we need some additonal info to piece different
+	// files separately.
+	fileOffset = 0            // Start from 0
+	fileLength = sybil.Length // We only need this much space
 	fileLeft := func() int64 { return fileLength - fileOffset }
 
 	// Construct pieces
@@ -85,7 +63,6 @@ func NewPieces(info *metainfo.Info, files []allocator.File, sybil *sybil.SybilIn
 	pieces := make([]Piece, info.NumPieces)
 	pieceBegin := uint32(sybil.PieceBegin)
 	pieceEnd := uint32(sybil.PieceEnd)
-	// for i := uint32(0); i < info.NumPieces; i++ {
 	for i := pieceBegin; i < pieceEnd; i++ {
 		p := Piece{
 			Index: i,
@@ -115,11 +92,10 @@ func NewPieces(info *metainfo.Info, files []allocator.File, sybil *sybil.SybilIn
 			fileOffset += int64(n)
 			total += int64(n)
 
-			// if total == info.Length {
-			fmt.Printf("total: %d, sybil.Length: %d, info.Length %d\n",
-		total, sybil.Length, info.Length)
-			fmt.Printf("piece start %d, piece end %d, info numpiece %d\n",
-		sybil.PieceBegin, sybil.PieceEnd, info.NumPieces)
+			// fmt.Printf("total: %d, sybil.Length: %d, info.Length %d\n",
+							// total, sybil.Length, info.Length)
+			// fmt.Printf("piece start %d, piece end %d, info numpiece %d\n",
+						// sybil.PieceBegin, sybil.PieceEnd, info.NumPieces)
 			if total == sybil.Length {
 				break
 			}

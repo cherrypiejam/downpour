@@ -29,8 +29,7 @@ func (t *torrent) handleAllocationDone(al *allocator.Allocator) {
 		panic("pieces exists")
 	}
 
-	// TODO for range min <= i < max, specifiing range
-	// parameter needed: #, which part
+	// Mount sybil attack
 	pieces := piece.NewPieces(t.info, t.files, t.Sybil)
 	if len(pieces) == 0 {
 		t.stop(fmt.Errorf("torrent has zero pieces"))
