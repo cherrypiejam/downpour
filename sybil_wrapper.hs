@@ -10,6 +10,13 @@ forceGetContents :: String -> IO ()
 forceGetContents s = void $ evaluate $ length s
 
 -- This is a wrapper program for downpour sybil
+-- Example:
+-- runghc sybil_wrapper.hs
+--      downpour
+--      ../downpour/playground/torrents/text.torrent
+--      playground/config/
+--      playground/data/
+--      test.img.text 0 2
 main :: IO ()
 main = do
     args <- getArgs
@@ -44,6 +51,8 @@ main = do
                             }
                         forkIO $ hGetContents herr >>= forceGetContents
                         forkIO $ hGetContents hout >>= forceGetContents
+                        -- forkIO $ hGetContents herr >>= putStrLn
+                        -- forkIO $ hGetContents hout >>= putStrLn
                         return h)
                     mapM_ waitForProcess hs
                     -- Collect results
@@ -53,7 +62,9 @@ main = do
                             createProcess (proc "cat" outfiles) {
                                 std_out = CreatePipe
                             }
-                    forkIO $ hGetContents hout >>= writeFile outname -- FIXME add param, need to know the outfile name
+                    -- FIXME Need to know the outfile name.
+                    -- Alternatively, we can read the torrent file for the name.
+                    forkIO $ hGetContents hout >>= writeFile outname
                     void $ waitForProcess h
                 Nothing -> return ()
         _wrongNumArgs ->
