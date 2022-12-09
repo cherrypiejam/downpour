@@ -75,7 +75,8 @@ func (s *Session) addTorrentStopped(r io.Reader, opt *AddTorrentOptions) (*Torre
 			s.releasePort(port)
 		}
 	}()
-	t, err := newTorrent2(
+	logfile := s.config.DataDir + "stats.log"
+	t, err := newTorrent2Log(
 		s,
 		id,
 		time.Now(),
@@ -92,6 +93,7 @@ func (s *Session) addTorrentStopped(r io.Reader, opt *AddTorrentOptions) (*Torre
 		opt.StopAfterDownload,
 		opt.StopAfterMetadata,
 		false, // completeCmdRun
+		logfile,
 	)
 	if err != nil {
 		return nil, err

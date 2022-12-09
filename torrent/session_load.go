@@ -90,7 +90,8 @@ func (s *Session) loadExistingTorrent(id string) (tt *Torrent, hasStarted bool, 
 	if err != nil {
 		return
 	}
-	t, err := newTorrent2(
+	logfile := s.config.DataDir + "stats.log"
+	t, err := newTorrent2Log(
 		s,
 		id,
 		spec.AddedAt,
@@ -112,6 +113,7 @@ func (s *Session) loadExistingTorrent(id string) (tt *Torrent, hasStarted bool, 
 		spec.StopAfterDownload,
 		spec.StopAfterMetadata,
 		spec.CompleteCmdRun,
+		logfile,
 	)
 	if err != nil {
 		return

@@ -891,11 +891,13 @@ func handleDd(c *cli.Context) error {
 	}
 
 	// Output log
-	f, err := os.Create(cfg.DataDir + "stats.log")
-	if err != nil {
-		return err
-	}
-	defer f.Close()
+	// f, err := os.Create(cfg.DataDir + "stats.log")
+	// f, err := os.OpenFile(cfg.DataDir + "stats.log",
+						// os.O_RDWR|os.O_CREATE|os.O_APPEND, 0755)
+	// if err != nil {
+		// return err
+	// }
+	// defer f.Close()
 
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
@@ -909,7 +911,6 @@ func handleDd(c *cli.Context) error {
 			}
 		case <-time.After(time.Second):
 			stats := t.Stats()
-			peers := t.Peers()
 			progress := 0
 			if stats.Bytes.Total > 0 {
 				progress = int((stats.Bytes.Completed * 100) / stats.Bytes.Total)
@@ -921,12 +922,13 @@ func handleDd(c *cli.Context) error {
 			log.Infof("------------\n")
 			log.Infof("Status: %s, Progress: %d%%, Peers: %d, Speed: %dK/s, ETA: %s, Upload Speed %dK/s\n",
 				stats.Status.String(), progress, stats.Peers.Total, stats.Speed.Download/1024, eta, stats.Speed.Upload/1024)
-			fmt.Fprintf(f, "Status: %s, Progress: %d%%, Peers: %d, Speed: %dK/s, ETA: %s, Upload Speed %dK/s\n",
-				stats.Status.String(), progress, stats.Peers.Total, stats.Speed.Download/1024, eta, stats.Speed.Upload/1024)
-			for _, p := range peers {
-				log.Infof("\tPeer: %s, Download: %dK/s, Upload %dK/s\n",
-					p.Addr.String(), p.DownloadSpeed/1024, p.UploadSpeed/1024)
-			}
+			// fmt.Fprintf(f, "Status: %s, Progress: %d%%, Peers: %d, Speed: %dK/s, ETA: %s, Upload Speed %dK/s\n",
+				// stats.Status.String(), progress, stats.Peers.Total, stats.Speed.Download/1024, eta, stats.Speed.Upload/1024)
+			// peers := t.Peers()
+			// for _, p := range peers {
+				// log.Infof("\tPeer: %s, Download: %dK/s, Upload %dK/s\n",
+					// p.Addr.String(), p.DownloadSpeed/1024, p.UploadSpeed/1024)
+			// }
 		case err = <-t.NotifyStop():
 			return err
 		}

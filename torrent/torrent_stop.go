@@ -1,6 +1,9 @@
 package torrent
 
 import (
+	"time"
+	"fmt"
+
 	"downpour/internal/announcer"
 	"downpour/internal/handshaker/incominghandshaker"
 	"downpour/internal/handshaker/outgoinghandshaker"
@@ -48,6 +51,11 @@ func (t *torrent) stop(err error) {
 	if err != nil && err != errClosed {
 		t.log.Error(err)
 	}
+
+	now := time.Now()
+	diff := now.Sub(t.startTime)
+	fmt.Fprintf(t.logfile, "%s\n", diff)
+	defer t.logfile.Close()
 
 	t.stopAcceptor()
 	t.stopPeers()
