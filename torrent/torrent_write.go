@@ -80,6 +80,9 @@ func (t *torrent) handlePieceWriteDone(pw *piecewriter.PieceWriter) {
 		// }
 		msg := peerprotocol.HaveMessage{Index: pw.Piece.Index}
 		pe.SendMessage(msg)
+		for i := 0; i < t.rebel; i++ {
+			pe.SendMessage(msg)
+		}
 	}
 
 	completed := t.checkCompletion()

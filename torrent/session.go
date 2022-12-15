@@ -234,6 +234,166 @@ func NewSession(cfg Config) (*Session, error) {
 	return c, nil
 }
 
+
+// NewSession creates a new Session for downloading and seeding torrents.
+// Returned session must be closed after use.
+func NewSessionRebel(cfg Config, rebel int) (*Session, error) {
+	if cfg.PortBegin >= cfg.PortEnd {
+		return nil, errors.New("invalid port range")
+	}
+	if cfg.MaxOpenFiles > 0 {
+		err := setNoFile(cfg.MaxOpenFiles)
+		if err != nil {
+			return nil, errors.New("cannot change max open files limit: " + err.Error())
+		}
+	}
+	var err error
+	cfg.Database, err = homedir.Expand(cfg.Database)
+	if err != nil {
+		return nil, err
+	}
+	cfg.DataDir, err = homedir.Expand(cfg.DataDir)
+	if err != nil {
+		return nil, err
+	}
+	err = os.MkdirAll(filepath.Dir(cfg.Database), os.ModeDir|cfg.FilePermissions)
+	if err != nil {
+		return nil, err
+	}
+	l := logger.New("session")
+	db, err := bbolt.Open(cfg.Database, cfg.FilePermissions&^0111, &bbolt.Options{Timeout: time.Second})
+	if err == bbolt.ErrTimeout {
+		return nil, errors.New("resume database is locked by another process")
+	} else if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err != nil {
+			db.Close()
+		}
+	}()
+	var ids []string
+	err = db.Update(func(tx *bbolt.Tx) error {
+		_, err2 := tx.CreateBucketIfNotExists(sessionBucket)
+		if err2 != nil {
+			return err2
+		}
+		b, err2 := tx.CreateBucketIfNotExists(torrentsBucket)
+		if err2 != nil {
+			return err2
+		}
+		return b.ForEach(func(k, _ []byte) error {
+			ids = append(ids, string(k))
+			return nil
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+	res, err := boltdbresumer.New(db, torrentsBucket)
+	if err != nil {
+		return nil, err
+	}
+	var dhtNode *dht.DHT
+	if cfg.DHTEnabled {
+		dhtConfig := dht.NewConfig()
+		dhtConfig.Address = cfg.DHTHost
+		dhtConfig.Port = int(cfg.DHTPort)
+		dhtConfig.DHTRouters = strings.Join(cfg.DHTBootstrapNodes, ",")
+		dhtConfig.SaveRoutingTable = false
+		dhtConfig.NumTargetPeers = 0
+		dhtNode, err = dht.New(dhtConfig)
+		if err != nil {
+			return nil, err
+		}
+		err = dhtNode.Start()
+		if err != nil {
+			return nil, err
+		}
+	}
+	ports := make(map[int]struct{})
+	for p := cfg.PortBegin; p < cfg.PortEnd; p++ {
+		ports[int(p)] = struct{}{}
+	}
+	bl := blocklist.NewLogger(l.Errorf)
+	var blTracker *blocklist.Blocklist
+	if cfg.BlocklistEnabledForTrackers {
+		blTracker = bl
+	}
+	c := &Session{
+		config:             cfg,
+		db:                 db,
+		resumer:            res,
+		blocklist:          bl,
+		trackerManager:     trackermanager.New(blTracker, cfg.DNSResolveTimeout, !cfg.TrackerHTTPVerifyTLS),
+		log:                l,
+		torrents:           make(map[string]*Torrent),
+		torrentsByInfoHash: make(map[dht.InfoHash][]*Torrent),
+		availablePorts:     ports,
+		dht:                dhtNode,
+		pieceCache:         piececache.New(cfg.ReadCacheSize, cfg.ReadCacheTTL, cfg.ParallelReads),
+		ram:                resourcemanager.New[*peer.Peer](cfg.WriteCacheSize),
+		createdAt:          time.Now(),
+		semWrite:           semaphore.New(int(cfg.ParallelWrites)),
+		closeC:             make(chan struct{}),
+		webseedClient: http.Client{
+			Transport: &http.Transport{
+				DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+					ip, port, err := resolver.Resolve(ctx, addr, cfg.DNSResolveTimeout, bl)
+					if err != nil {
+						return nil, err
+					}
+					var d net.Dialer
+					taddr := &net.TCPAddr{IP: ip, Port: port}
+					dctx, cancel := context.WithTimeout(ctx, cfg.WebseedDialTimeout)
+					defer cancel()
+					return d.DialContext(dctx, network, taddr.String())
+				},
+				TLSHandshakeTimeout:   cfg.WebseedTLSHandshakeTimeout,
+				TLSClientConfig:       &tls.Config{InsecureSkipVerify: !cfg.WebseedVerifyTLS}, // nolint: gosec
+				ResponseHeaderTimeout: cfg.WebseedResponseHeaderTimeout,
+			},
+		},
+	}
+	dlSpeed := cfg.SpeedLimitDownload * 1024
+	if cfg.SpeedLimitDownload > 0 {
+		c.bucketDownload = rate.NewLimiter(rate.Limit(float64(dlSpeed)), dlSpeed)
+	}
+	ulSpeed := cfg.SpeedLimitUpload * 1024
+	if cfg.SpeedLimitUpload > 0 {
+		c.bucketUpload = rate.NewLimiter(rate.Limit(float64(ulSpeed)), ulSpeed)
+	}
+	err = c.startBlocklistReloader()
+	if err != nil {
+		return nil, err
+	}
+	ext, err := bitfield.NewBytes(c.extensions[:], 64)
+	if err != nil {
+		panic(err)
+	}
+	// Change: We disable fast extension here
+	// ext.Set(61) // Fast Extension (BEP 6)
+	ext.Set(43) // Extension Protocol (BEP 10)
+	if cfg.DHTEnabled {
+		ext.Set(63) // DHT Protocol (BEP 5)
+		c.dhtPeerRequests = make(map[*torrent]struct{})
+	}
+	c.initMetrics()
+	c.loadExistingTorrentsRebel(ids, rebel)
+	if c.config.RPCEnabled {
+		c.rpc = newRPCServer(c)
+		err = c.rpc.Start(c.config.RPCHost, c.config.RPCPort)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if cfg.DHTEnabled {
+		go c.processDHTResults()
+	}
+	go c.updateStatsLoop()
+	return c, nil
+}
+
 func (s *Session) parseTrackers(tiers [][]string, private bool) []tracker.Tracker {
 	ret := make([]tracker.Tracker, 0, len(tiers))
 	for _, tier := range tiers {

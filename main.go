@@ -144,6 +144,10 @@ func main() {
 					Name:  "uploadlimit,ul",
 					Usage: "upload limit speed",
 				},
+				cli.IntFlag{
+					Name:  "rebel,r",
+					Usage: "number of announce times",
+				},
 			},
 			Action: handleDd,
 		},
@@ -819,6 +823,7 @@ func handleDd(c *cli.Context) error {
 	outdir := c.String("outdir")
 	dl := c.Int("downloadlimit")
 	ul := c.Int("uploadlimit")
+	rebel := c.Int("rebel")
 	cfg, err := prepareConfig(c)
 	if err != nil {
 		return err
@@ -858,7 +863,7 @@ func handleDd(c *cli.Context) error {
 	if resume != "" {
 		cfg.Database = resume
 	}
-	ses, err := torrent.NewSession(cfg)
+	ses, err := torrent.NewSessionRebel(cfg, rebel)
 	if err != nil {
 		return err
 	}
@@ -882,7 +887,7 @@ func handleDd(c *cli.Context) error {
 			if err != nil {
 				return err
 			}
-			t, err = ses.AddTorrent(f, opt)
+			t, err = ses.AddTorrentRebel(f, opt, rebel)
 			f.Close()
 		}
 	}

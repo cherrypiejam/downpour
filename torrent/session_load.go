@@ -15,6 +15,31 @@ import (
 
 var errTooManyPieces = errors.New("too many pieces")
 
+
+func (s *Session) loadExistingTorrentsRebel(ids []string, rebel int) {
+	var loaded int
+	var started []*Torrent
+	for _, id := range ids {
+		t, hasStarted, err := s.loadExistingTorrentRebel(id, rebel)
+		if err != nil {
+			s.log.Error(err)
+			s.invalidTorrentIDs = append(s.invalidTorrentIDs, id)
+			continue
+		}
+		s.log.Debugf("loaded existing torrent: #%s %s", id, t.Name())
+		loaded++
+		if hasStarted {
+			started = append(started, t)
+		}
+	}
+	s.log.Infof("loaded %d existing torrents", loaded)
+	if s.config.ResumeOnStartup {
+		for _, t := range started {
+			t.torrent.Start()
+		}
+	}
+}
+
 func (s *Session) loadExistingTorrents(ids []string) {
 	var loaded int
 	var started []*Torrent
@@ -114,6 +139,73 @@ func (s *Session) loadExistingTorrent(id string) (tt *Torrent, hasStarted bool, 
 		spec.StopAfterMetadata,
 		spec.CompleteCmdRun,
 		logfile,
+	)
+	if err != nil {
+		return
+	}
+	t.rawTrackers = spec.Trackers
+	t.rawWebseedSources = spec.URLList
+	go s.checkTorrent(t)
+	delete(s.availablePorts, spec.Port)
+
+	tt = s.insertTorrent(t)
+	return
+}
+
+
+func (s *Session) loadExistingTorrentRebel(id string, rebel int) (tt *Torrent, hasStarted bool, err error) {
+	spec, err := s.resumer.Read(id)
+	if err != nil {
+		return
+	}
+	hasStarted = spec.Started
+	var info *metainfo.Info
+	var bf *bitfield.Bitfield
+	var private bool
+	if len(spec.Info) > 0 {
+		info2, err2 := s.parseInfo(spec.Info, spec.Version)
+		if err2 != nil {
+			return nil, spec.Started, err2
+		}
+		info = info2
+		private = info.Private
+		if len(spec.Bitfield) > 0 {
+			bf3, err3 := bitfield.NewBytes(spec.Bitfield, info.NumPieces)
+			if err3 != nil {
+				return nil, spec.Started, err3
+			}
+			bf = bf3
+		}
+	}
+	sto, err := filestorage.New(s.getDataDir(id), s.config.FilePermissions)
+	if err != nil {
+		return
+	}
+	logfile := s.config.DataDir + "stats.log"
+	t, err := newTorrent2LogRebel(
+		s,
+		id,
+		spec.AddedAt,
+		spec.InfoHash,
+		sto,
+		spec.Name,
+		spec.Port,
+		s.parseTrackers(spec.Trackers, private),
+		spec.FixedPeers,
+		info,
+		bf,
+		resumer.Stats{
+			BytesDownloaded: spec.BytesDownloaded,
+			BytesUploaded:   spec.BytesUploaded,
+			BytesWasted:     spec.BytesWasted,
+			SeededFor:       int64(spec.SeededFor),
+		},
+		webseedsource.NewList(spec.URLList),
+		spec.StopAfterDownload,
+		spec.StopAfterMetadata,
+		spec.CompleteCmdRun,
+		logfile,
+		rebel,
 	)
 	if err != nil {
 		return
