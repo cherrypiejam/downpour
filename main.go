@@ -143,7 +143,8 @@ func main() {
 					Usage: "upload limit speed",
 				},
 				cli.IntFlag{
-					Name:  "initialreciprocal,ir",
+					Name:  "initialreciprocal,k",
+					Value: 10,
 					Usage: "initial estimated reciprocal upload speed/download speed from a peer",
 				},
 			},
