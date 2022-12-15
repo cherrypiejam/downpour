@@ -144,9 +144,10 @@ func main() {
 					Name:  "uploadlimit,ul",
 					Usage: "upload limit speed",
 				},
-				cli.IntFlag{
+				cli.Float64Flag{
 					Name: "kvalue, k",
 					Usage: "k value used to adjust active set size",
+                    Value: 1,
 				},
 			},
 			Action: handleDd,
@@ -823,7 +824,7 @@ func handleDd(c *cli.Context) error {
 	outdir := c.String("outdir")
 	dl := c.Int("downloadlimit")
 	ul := c.Int("uploadlimit")
-	kvalue := c.Int("kvalue")
+	kvalue := c.Float64("kvalue")
 	cfg, err := prepareConfig(c)
 	if err != nil {
 		return err
@@ -833,7 +834,7 @@ func handleDd(c *cli.Context) error {
 	cfg.SpeedLimitDownload = dl
 	cfg.SpeedLimitUpload = ul
 	if cfg.SpeedLimitUpload > 0 {
-		cfg.UnchokedPeers = int(float64(kvalue) * math.Sqrt(float64(ul)))
+		cfg.UnchokedPeers = int(kvalue * math.Sqrt(float64(ul)))
 	}
 	var ih torrent.InfoHash
 	if isURI(arg) {
