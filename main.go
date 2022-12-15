@@ -142,6 +142,10 @@ func main() {
 					Name:  "uploadlimit,ul",
 					Usage: "upload limit speed",
 				},
+				cli.IntFlag{
+					Name:  "initialreciprocal,ir",
+					Usage: "initial estimated reciprocal upload speed/download speed from a peer",
+				},
 			},
 			Action: handleDd,
 		},
@@ -817,6 +821,7 @@ func handleDd(c *cli.Context) error {
 	outdir := c.String("outdir")
 	dl := c.Int("downloadlimit")
 	ul := c.Int("uploadlimit")
+	irspeed := c.Int("initialreciprocal")
 	cfg, err := prepareConfig(c)
 	if err != nil {
 		return err
