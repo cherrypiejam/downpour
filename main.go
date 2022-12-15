@@ -834,7 +834,11 @@ func handleDd(c *cli.Context) error {
 	cfg.SpeedLimitDownload = dl
 	cfg.SpeedLimitUpload = ul
 	if cfg.SpeedLimitUpload > 0 {
-		cfg.UnchokedPeers = int(kvalue * math.Sqrt(float64(ul)))
+		if kvalue > 0 {
+			cfg.UnchokedPeers = int(kvalue * math.Sqrt(float64(ul)))	
+		} else {
+			cfg.UnchokedPeers = int(-kvalue)
+		}
 	}
 	var ih torrent.InfoHash
 	if isURI(arg) {
