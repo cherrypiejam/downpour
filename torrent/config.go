@@ -79,6 +79,8 @@ type Config struct {
 	// The unix permission of created files, execute bit is removed for files
 	FilePermissions fs.FileMode
 
+	InitialReciprocation int
+
 	// Enable RPC server
 	RPCEnabled bool
 	// Host to listen for RPC server
@@ -224,6 +226,8 @@ var DefaultConfig = Config{
 	HealthCheckInterval:                    10 * time.Second,
 	HealthCheckTimeout:                     60 * time.Second,
 	FilePermissions:                        0o750,
+
+	InitialReciprocation:                   10,
 
 	// RPC Server
 	RPCEnabled:         true,

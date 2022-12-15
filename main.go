@@ -830,6 +830,9 @@ func handleDd(c *cli.Context) error {
 	cfg.DataDirIncludesTorrentID = false
 	cfg.SpeedLimitDownload = dl
 	cfg.SpeedLimitUpload = ul
+	if irspeed > 0 {
+		cfg.InitialReciprocation = irspeed
+	}
 	var ih torrent.InfoHash
 	if isURI(arg) {
 		magnet, err := magnet.New(arg)
