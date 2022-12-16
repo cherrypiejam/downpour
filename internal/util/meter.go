@@ -1,5 +1,4 @@
 package util
-
 // ported from: https://github.com/rcrowley/go-metrics/tree/master
 
 import (
@@ -14,6 +13,7 @@ import (
 type Meter interface {
 	Count() int64
 	Mark(int64)
+	Reset()
 	Rate1() float64
 	Rate5() float64
 	Rate15() float64
@@ -77,6 +77,11 @@ func (*MeterSnapshot) Mark(n int64) {
 	panic("Mark called on a MeterSnapshot")
 }
 
+// Mark panics.
+func (*MeterSnapshot) Reset() {
+	panic("Reset called on a MeterSnapshot")
+}
+
 // Rate1 returns the one-minute moving average rate of events per second at the
 // time the snapshot was taken.
 func (m *MeterSnapshot) Rate1() float64 { return math.Float64frombits(m.rate1) }
@@ -107,6 +112,9 @@ func (NilMeter) Count() int64 { return 0 }
 
 // Mark is a no-op.
 func (NilMeter) Mark(n int64) {}
+
+// Reset is a no-op.
+func (NilMeter) Reset() {}
 
 // Rate1 is a no-op.
 func (NilMeter) Rate1() float64 { return 0.0 }
@@ -169,6 +177,21 @@ func (m *StandardMeter) Mark(n int64) {
 	m.a1.Update(n)
 	m.a5.Update(n)
 	m.a15.Update(n)
+	m.updateSnapshot()
+}
+
+
+// Mark records the occurance of n events.
+func (m *StandardMeter) Reset() {
+	if atomic.LoadUint32(&m.stopped) == 1 {
+		return
+	}
+
+	atomic.SwapInt64(&m.snapshot.count, 0)
+
+	m.a1.Reset1()
+	m.a5.Reset5()
+	m.a15.Reset15()
 	m.updateSnapshot()
 }
 

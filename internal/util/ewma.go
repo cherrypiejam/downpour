@@ -1,5 +1,4 @@
 package util
-
 // ported from: https://github.com/rcrowley/go-metrics/tree/master
 
 import (
@@ -12,6 +11,9 @@ import (
 // based on an outside source of clock ticks.
 type EWMA interface {
 	Rate() float64
+	Reset1()
+	Reset5()
+	Reset15()
 	Snapshot() EWMA
 	Tick()
 	Update(int64)
@@ -26,7 +28,6 @@ func NewEWMA(alpha float64) EWMA {
 }
 
 // NewEWMA1 constructs a new EWMA for a one-minute moving average.
-// Modified for a ten-second moving average
 func NewEWMA1() EWMA {
 	// return NewEWMA(1 - math.Exp(-5.0/60.0/1))
 	return NewEWMA(1 - math.Exp(-5.0/10.0/1))
@@ -49,6 +50,18 @@ type EWMASnapshot float64
 // taken.
 func (a EWMASnapshot) Rate() float64 { return float64(a) }
 
+func (a EWMASnapshot) Reset1() {
+	panic("Reset1 called on an EWMASnapshot")
+}
+
+func (a EWMASnapshot) Reset5() {
+	panic("Reset1 called on an EWMASnapshot")
+}
+
+func (a EWMASnapshot) Reset15() {
+	panic("Reset1 called on an EWMASnapshot")
+}
+
 // Snapshot returns the snapshot.
 func (a EWMASnapshot) Snapshot() EWMA { return a }
 
@@ -67,6 +80,15 @@ type NilEWMA struct{}
 
 // Rate is a no-op.
 func (NilEWMA) Rate() float64 { return 0.0 }
+
+// Reset1 is a no-op.
+func (NilEWMA) Reset1() { return }
+
+// Reset5 is a no-op.
+func (NilEWMA) Reset5() { return }
+
+// Reset15 is a no-op.
+func (NilEWMA) Reset15() { return }
 
 // Snapshot is a no-op.
 func (NilEWMA) Snapshot() EWMA { return NilEWMA{} }
@@ -92,6 +114,34 @@ type StandardEWMA struct {
 func (a *StandardEWMA) Rate() float64 {
 	currentRate := math.Float64frombits(atomic.LoadUint64(&a.rate)) * float64(1e9)
 	return currentRate
+}
+
+func (a *StandardEWMA) Reset1() {
+	a.mutex.Lock()
+	a.uncounted = 0
+	a.alpha = 1 - math.Exp(-5.0/10.0/1)
+	a.rate = 0
+	a.init = 0
+	a.mutex.Unlock()
+}
+
+func (a *StandardEWMA) Reset5() {
+	a.mutex.Lock()
+	a.uncounted = 0
+	a.alpha = 1 - math.Exp(-5.0/60.0/5)
+	a.rate = 0
+	a.init = 0
+	a.mutex.Unlock()
+}
+
+
+func (a *StandardEWMA) Reset15() {
+	a.mutex.Lock()
+	a.uncounted = 0
+	a.alpha = 1 - math.Exp(-5.0/60.0/15)
+	a.rate = 0
+	a.init = 0
+	a.mutex.Unlock()
 }
 
 // Snapshot returns a read-only copy of the EWMA.

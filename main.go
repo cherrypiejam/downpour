@@ -931,6 +931,12 @@ func handleDd(c *cli.Context) error {
 				// log.Infof("\tPeer: %s, Download: %dK/s, Upload %dK/s\n",
 					// p.Addr.String(), p.DownloadSpeed/1024, p.UploadSpeed/1024)
 			// }
+			if stats.Status == torrent.Stopped {
+				err = t.Stop()
+				if err != nil {
+					return err
+				}
+			}
 		case err = <-t.NotifyStop():
 			return err
 		}

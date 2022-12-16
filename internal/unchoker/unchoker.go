@@ -1,7 +1,7 @@
 package unchoker
 
 import (
-    "fmt"
+	// "fmt"
 	"math"
 	"math/rand"
 	"sort"
@@ -49,6 +49,7 @@ type Peer interface {
 	UnchokedRounds() int
 	SetUnchokedRounds(r int)
 	DownloadReciprocation() int
+	ResetMeasuredReciprocation()
 	SetEstimatedReciprocation()
 	UploadContribution() int
 	SetUploadContribution(speed int)
@@ -56,6 +57,7 @@ type Peer interface {
 
 	DownloadSpeed() int
 	UploadSpeed() int
+	Debug()
 }
 
 // New returns a new Unchoker.
@@ -137,12 +139,18 @@ func (u *Unchoker) TickTyrantUnchoke(allPeers []Peer) {
 
 	u.sortPeersByRatio(peers)
 
-	fmt.Printf("printing\n")
+	// fmt.Printf("printing\n")
 	for j := 0; j < len(peers) ; j++ {
-		fmt.Printf("%d, reciprocation %d, budget needed %d\n", j,
-		peers[j].DownloadReciprocation(), peers[j].UploadContribution())
+		// fmt.Printf("%d, reciprocation %d, budget needed %d\n", j,
+			// peers[j].DownloadReciprocation(), peers[j].UploadContribution())
+		// peers[j].Debug()
+		peers[j].ResetMeasuredReciprocation()
+		// peers[j].Debug()
+		// fmt.Printf("%d, reciprocation %d, budget needed %d,  after reset\n", j,
+			// peers[j].DownloadReciprocation(), peers[j].UploadContribution())
+
 	}
-	fmt.Printf("printing End\n")
+	// fmt.Printf("printing End\n")
 
 
 	// bugdet of upload speed
@@ -151,10 +159,9 @@ func (u *Unchoker) TickTyrantUnchoke(allPeers []Peer) {
 
 	// Capacity is the total upload limit (int, KB)
 	for i = 0; i < len(peers) && budget < u.Capacity; i++ {
-		fmt.Printf("unchoked peer %d, budget needed %d, reciprocation %d, cap %d\n",
-			i, peers[i].UploadContribution(), peers[i].DownloadReciprocation(), u.Capacity)
+		// fmt.Printf("unchoked peer %d, budget needed %d, reciprocation %d, cap %d\n",
+			// i, peers[i].UploadContribution(), peers[i].DownloadReciprocation(), u.Capacity)
 		if budget + peers[i].UploadContribution() > u.Capacity{
-			// // FIXME not working?
 			// fmt.Printf(">>>>>>>>>> %d\n", u.Capacity - budget)
 			uc := u.Capacity - budget
 			peers[i].SetUploadLimit(uc) // take a shot

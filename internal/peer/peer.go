@@ -1,6 +1,7 @@
 package peer
 
 import (
+	"fmt"
 	"math"
 	"net"
 	"sync"
@@ -57,10 +58,9 @@ type Peer struct {
 	// BitTyrant parameters
 	estimatedContribution int
 	estimatedReciprocation int
-	// reciprocalUploadSpeed int
-	// estimatedDownloadSpeed int
 
 	EstimatedReciprocation util.Meter
+	MeasuredReciprocation util.Meter
 
 	// Calculate # rounds being unchoked
 	unchokedRounds int
@@ -124,9 +124,10 @@ func New(conn net.Conn, source peersource.Source, id [20]byte, extensions [8]byt
 		doneC:             make(chan struct{}),
 		estimatedReciprocation: ir, // TODO adjust estimated init rate, exp/3
 		estimatedContribution:  ir, // constant values for now
-		downloadSpeed:     util.NewMeter(),
-		uploadSpeed:       util.NewMeter(),
+		downloadSpeed:          util.NewMeter(),
+		uploadSpeed:            util.NewMeter(),
 		EstimatedReciprocation: util.NewMeter(),
+		MeasuredReciprocation:  util.NewMeter(),
 	}
 }
 
@@ -147,6 +148,8 @@ func (p *Peer) Close() {
 	p.Conn.Close()
 	p.downloadSpeed.Stop()
 	p.uploadSpeed.Stop()
+	p.EstimatedReciprocation.Stop()
+	p.MeasuredReciprocation.Stop()
 	<-p.doneC
 }
 
@@ -179,6 +182,7 @@ func (p *Peer) Run(messages chan Message, pieces chan PieceMessage, snubbed, dis
 			}
 			if m, ok := pm.(peerreader.Piece); ok {
 				p.downloadSpeed.Mark(int64(len(m.Buffer.Data)))
+				p.MeasuredReciprocation.Mark(int64(len(m.Buffer.Data)))
 				select {
 				case pieces <- PieceMessage{Peer: p, Piece: m}:
 				case <-p.closeC:
@@ -233,14 +237,23 @@ func (p *Peer) SetUnchokedRounds(r int) {
 }
 
 func (p *Peer) DownloadReciprocation() int {
-	if ds := p.DownloadSpeed()/1024; ds > 0 {
+	if ds := int(p.MeasuredReciprocation.Rate1())/1024; ds > 0 {
 		return ds
 	}
 	return p.estimatedReciprocation
 }
 
+func (p *Peer) ResetMeasuredReciprocation() {
+	p.MeasuredReciprocation.Reset()
+}
+
+func (p *Peer) Debug() {
+	fmt.Printf("measured: %d, estimated: %d\n", int(p.MeasuredReciprocation.Rate1()), p.estimatedReciprocation)
+}
+
 func (p *Peer) SetEstimatedReciprocation() {
-	p.estimatedReciprocation = int(p.EstimatedReciprocation.Rate1())/1024
+	// Assume k = 1
+	p.estimatedReciprocation = int(math.Sqrt((p.EstimatedReciprocation.Rate1()/1024)))
 }
 
 func (p *Peer) UploadContribution() int {
