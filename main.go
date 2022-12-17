@@ -145,7 +145,7 @@ func main() {
 					Usage: "upload limit speed",
 				},
 				cli.IntFlag{
-					Name:  "rebel,r",
+					Name:  "rebel,k",
 					Usage: "number of announce times",
 				},
 			},
